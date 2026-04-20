@@ -285,6 +285,113 @@
       border: 1px solid #e5e7eb;
       border-radius: 12px;
     }
+    .record-window {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .record-search-row {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f8fafc;
+    }
+    .record-search-row input {
+      border-radius: 8px;
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+    .record-window .records-table-wrap {
+      max-height: 260px;
+      overflow: auto;
+      border: 0;
+      border-radius: 0;
+    }
+    .record-window th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .record-card-scroll {
+      max-height: 530px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      background: #f9fafb;
+    }
+    .record-card {
+      display: grid;
+      grid-template-columns: 50px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 118px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .record-card-thumb {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .record-card-title {
+      margin: 0 0 6px;
+      color: #111827;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .record-card-meta {
+      color: #6b7280;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+    .record-card-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .record-card-stat {
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 8px;
+      min-width: 0;
+    }
+    .record-card-stat span {
+      display: block;
+      margin-bottom: 4px;
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .record-card-stat strong {
+      display: block;
+      color: #111827;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .record-card-actions {
+      display: grid;
+      gap: 8px;
+      min-width: 72px;
+    }
+    .record-card-actions button {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -529,6 +636,22 @@
         align-items: stretch;
         flex-direction: column;
       }
+      .record-card {
+        grid-template-columns: 42px minmax(0, 1fr);
+        align-items: start;
+      }
+      .record-card-thumb {
+        width: 42px;
+        height: 42px;
+        font-size: 18px;
+      }
+      .record-card-actions {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1fr;
+      }
+      .record-card-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .stock-table {
         display: none;
       }
@@ -689,8 +812,13 @@
           <button class="btn-secondary" id="cancelEditBtn" type="button" hidden>Yeni kayıt moduna geç</button>
           <span class="record-status" id="recordEditStatus">Kayıtlar barkoda göre eşleşir.</span>
         </div>
-        <div id="recordsArea" class="empty-state">
-          Ortak kayıtlar yükleniyor.
+        <div class="record-window">
+          <div class="record-search-row">
+            <input id="recordSearch" type="search" placeholder="Ürün adı veya barkod ara" autocomplete="off" />
+          </div>
+          <div id="recordsArea" class="empty-state">
+            Ortak kayıtlar yükleniyor.
+          </div>
         </div>
       </div>
 
@@ -774,6 +902,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
     const recordsArea = document.getElementById('recordsArea');
+    const recordSearch = document.getElementById('recordSearch');
     const currentDateValue = document.getElementById('currentDateValue');
     const istanbulTimeValue = document.getElementById('istanbulTimeValue');
     const dusseldorfTimeValue = document.getElementById('dusseldorfTimeValue');
@@ -993,6 +1122,23 @@
         .replace(/'/g, '&#039;');
     }
 
+    function normalizeSearchText(value) {
+      return String(value || '')
+        .toLocaleLowerCase('tr-TR')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function getRecordInitial(name) {
+      return String(name || 'Ü').trim().charAt(0).toLocaleUpperCase('tr-TR') || 'Ü';
+    }
+
     function formatDate(value) {
       return new Intl.DateTimeFormat('tr-TR', {
         dateStyle: 'short',
@@ -1154,52 +1300,64 @@
         return;
       }
 
-      const sortedRecords = [...records].sort((a, b) => b.results.profit - a.results.profit);
+      const query = normalizeSearchText(recordSearch.value.trim());
+      const filteredRecords = query
+        ? records.filter(record => {
+          const searchable = normalizeSearchText(`${record.name || ''} ${record.barcode || ''}`);
+          return searchable.includes(query);
+        })
+        : records;
 
-      recordsArea.className = 'records-table-wrap';
+      if (!filteredRecords.length) {
+        recordsArea.className = 'empty-state';
+        recordsArea.innerHTML = 'Aradığın ürün ortak kayıtlarda bulunamadı.';
+        return;
+      }
+
+      const sortedRecords = [...filteredRecords].sort((a, b) => b.results.profit - a.results.profit);
+
+      recordsArea.className = 'record-card-scroll';
       recordsArea.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Kayıt</th>
-              <th>Barkod</th>
-              <th>Tarih</th>
-              <th>Satış</th>
-              <th>Alış</th>
-              <th>Kargo</th>
-              <th>Komisyon</th>
-              <th>Net kâr</th>
-              <th>Kâr oranı</th>
-              <th>İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sortedRecords.map(record => {
-              const profitRate = record.inputs.salePrice > 0
-                ? record.results.profit / record.inputs.salePrice
-                : 0;
+        ${sortedRecords.map(record => {
+          const profitRate = record.inputs.salePrice > 0
+            ? record.results.profit / record.inputs.salePrice
+            : 0;
+          const profitClass = record.results.profit >= 0 ? 'profit-positive' : 'profit-negative';
 
-              return `
-              <tr>
-                <td>${escapeHtml(record.name)}</td>
-                <td>${escapeHtml(record.barcode || '-')}</td>
-                <td>${formatDate(record.createdAt)}</td>
-                <td>${tl(record.inputs.salePrice)}</td>
-                <td>${tl(record.inputs.purchasePrice)}</td>
-                <td>${tl(record.inputs.shippingFee)}</td>
-                <td>${tl(record.results.commissionFee)}</td>
-                <td class="${record.results.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${tl(record.results.profit)}</td>
-                <td class="${record.results.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percent(profitRate)}</td>
-                <td>
-                  <div class="table-actions">
-                    <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
-                    <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
+          return `
+            <article class="record-card">
+              <div class="record-card-thumb">${escapeHtml(getRecordInitial(record.name))}</div>
+              <div class="record-card-body">
+                <p class="record-card-title">${escapeHtml(record.name)}</p>
+                <div class="record-card-meta">
+                  Barkod: ${escapeHtml(record.barcode || '-')} · ${formatDate(record.createdAt)}
+                </div>
+                <div class="record-card-stats">
+                  <div class="record-card-stat">
+                    <span>Satış</span>
+                    <strong>${tl(record.inputs.salePrice)}</strong>
                   </div>
-                </td>
-              </tr>
-            `}).join('')}
-          </tbody>
-        </table>
+                  <div class="record-card-stat">
+                    <span>Alış</span>
+                    <strong>${tl(record.inputs.purchasePrice)}</strong>
+                  </div>
+                  <div class="record-card-stat">
+                    <span>Kargo</span>
+                    <strong>${tl(record.inputs.shippingFee)}</strong>
+                  </div>
+                  <div class="record-card-stat">
+                    <span>Net kâr</span>
+                    <strong class="${profitClass}">${tl(record.results.profit)} · ${percent(profitRate)}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="record-card-actions">
+                <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
+                <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
+              </div>
+            </article>
+          `;
+        }).join('')}
       `;
     }
 
@@ -1465,6 +1623,7 @@
     refreshRateBtn.addEventListener('click', fetchEuroRate);
     refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
     importTrendyolRecordsBtn.addEventListener('click', importTrendyolRecords);
+    recordSearch.addEventListener('input', () => renderRecords(recordsCache));
     cancelEditBtn.addEventListener('click', resetForm);
     trendyolStockSearch.addEventListener('keydown', event => {
       if (event.key === 'Enter') fetchTrendyolStock();
