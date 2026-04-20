@@ -255,6 +255,7 @@ async function handleApi(req, res, url) {
   if (req.method === 'POST' && url.pathname === '/api/records') {
     const body = await readBody(req);
     const name = String(body.name || '').trim().slice(0, 80);
+    const barcode = String(body.barcode || '').trim().slice(0, 80);
 
     if (!name) {
       send(res, 400, { error: 'Kayıt adı gerekli.' });
@@ -265,6 +266,7 @@ async function handleApi(req, res, url) {
     const record = {
       id: crypto.randomUUID(),
       name,
+      barcode,
       createdAt: new Date().toISOString(),
       ...calculation
     };
