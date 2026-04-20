@@ -104,6 +104,25 @@
       font-weight: 800;
       text-align: right;
     }
+    .euro-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .euro-status {
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+    }
+    .btn-mini {
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
     h1 {
       margin: 0 0 8px;
       font-size: 28px;
@@ -356,6 +375,10 @@
       .euro-result {
         text-align: left;
       }
+      .euro-meta {
+        align-items: flex-start;
+        flex-direction: column;
+      }
       .result-value { font-size: 24px; }
       .wrap { margin: 0; padding: 10px; }
       .card { border-radius: 0; min-height: 100vh; }
@@ -381,10 +404,14 @@
               </div>
               <div class="euro-field">
                 <label for="eurRate">Kur</label>
-                <input id="eurRate" type="number" min="0" step="0.0001" placeholder="Örn: 45.25" />
+                <input id="eurRate" type="number" min="0" step="0.0001" placeholder="Yükleniyor" />
               </div>
             </div>
             <div class="euro-result" id="eurTryResult">Kur gir</div>
+            <div class="euro-meta">
+              <span class="euro-status" id="eurRateStatus">Kur otomatik alınıyor.</span>
+              <button class="btn-secondary btn-mini" id="refreshRateBtn" type="button">Kuru yenile</button>
+            </div>
           </div>
         </div>
       </div>
@@ -552,6 +579,8 @@
     const eurAmount = document.getElementById('eurAmount');
     const eurRate = document.getElementById('eurRate');
     const eurTryResult = document.getElementById('eurTryResult');
+    const eurRateStatus = document.getElementById('eurRateStatus');
+    const refreshRateBtn = document.getElementById('refreshRateBtn');
     const noteText = document.getElementById('noteText');
     const saveNoteBtn = document.getElementById('saveNoteBtn');
     const notesArea = document.getElementById('notesArea');
@@ -592,6 +621,33 @@
       }
 
       eurTryResult.textContent = tl(amount * rate);
+    }
+
+    async function fetchEuroRate() {
+      refreshRateBtn.disabled = true;
+      eurRateStatus.textContent = 'Kur otomatik alınıyor.';
+
+      try {
+        const response = await fetch('https://api.frankfurter.dev/v2/rate/EUR/TRY');
+
+        if (!response.ok) {
+          throw new Error('Kur alınamadı.');
+        }
+
+        const data = await response.json();
+
+        if (!data.rate) {
+          throw new Error('Kur yanıtı beklenen formatta değil.');
+        }
+
+        eurRate.value = Number(data.rate).toFixed(4);
+        eurRateStatus.textContent = `Güncel kur: ${data.date}`;
+        calculateEuroTry();
+      } catch (error) {
+        eurRateStatus.textContent = 'Kur otomatik alınamadı, elle girebilirsin.';
+      } finally {
+        refreshRateBtn.disabled = false;
+      }
     }
 
     function percent(v) {
@@ -936,6 +992,7 @@
 
     eurAmount.addEventListener('input', calculateEuroTry);
     eurRate.addEventListener('input', calculateEuroTry);
+    refreshRateBtn.addEventListener('click', fetchEuroRate);
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
     saveNoteBtn.addEventListener('click', saveNote);
@@ -967,6 +1024,7 @@
 
     updateClock();
     setInterval(updateClock, 1000);
+    fetchEuroRate();
     calculateEuroTry();
     calculate();
     fetchRecords();
