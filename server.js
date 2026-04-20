@@ -14,7 +14,7 @@ const NOTES_FILE = process.env.NOTES_FILE
 const DATA_DIR = path.dirname(DATA_FILE);
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 
@@ -236,12 +236,99 @@ async function getTrendyolStock(url) {
   };
 }
 
+async function importTrendyolRecords(url) {
+  const size = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get('size') || '100', 10) || 100));
+  const maxPages = Math.min(25, Math.max(1, Number.parseInt(url.searchParams.get('maxPages') || '1', 10) || 1));
+  const startPage = Math.max(0, Number.parseInt(url.searchParams.get('startPage') || '0', 10) || 0);
+  const records = await readRecords();
+  const byBarcode = new Map();
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  let totalPages = startPage + 1;
+  let processedPages = 0;
+
+  records.forEach(record => {
+    const barcode = String(record.barcode || '').trim().toLowerCase();
+    if (barcode && !byBarcode.has(barcode)) byBarcode.set(barcode, record);
+  });
+
+  for (let page = startPage; page < totalPages && page < startPage + maxPages; page += 1) {
+    const pageUrl = new URL('http://localhost/api/trendyol-stock');
+    pageUrl.searchParams.set('page', String(page));
+    pageUrl.searchParams.set('size', String(size));
+    const payload = await getTrendyolStock(pageUrl);
+    totalPages = Math.max(1, Number(payload.totalPages || 1));
+    processedPages += 1;
+
+    payload.items.forEach(item => {
+      const barcode = String(item.barcode || '').trim();
+
+      if (!barcode) {
+        skipped += 1;
+        return;
+      }
+
+      const existing = byBarcode.get(barcode.toLowerCase());
+      const calculation = calculate({
+        salePrice: item.salePrice || item.listPrice || 0,
+        purchasePrice: existing?.inputs?.purchasePrice || 0,
+        shippingFee: 100,
+        commissionRate: 19,
+        withholdingRate: 1,
+        vatRate: 1,
+        saleMode: 'includingVat',
+        commissionBase: 'salePrice'
+      });
+      const record = {
+        id: existing?.id || crypto.randomUUID(),
+        name: String(item.title || barcode || 'Trendyol ürünü').slice(0, 180),
+        barcode: barcode.slice(0, 80),
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        ...calculation
+      };
+
+      if (existing) {
+        const index = records.findIndex(item => item.id === existing.id);
+        if (index >= 0) records[index] = record;
+        updated += 1;
+      } else {
+        records.unshift(record);
+        byBarcode.set(barcode.toLowerCase(), record);
+        created += 1;
+      }
+    });
+  }
+
+  await writeRecords(records);
+
+  return {
+    ok: true,
+    created,
+    updated,
+    skipped,
+    processedPages,
+    totalPages,
+    nextPage: startPage + processedPages,
+    hasMore: startPage + processedPages < totalPages
+  };
+}
+
 async function handleApi(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/api/trendyol-stock') {
     try {
       send(res, 200, await getTrendyolStock(url));
     } catch (error) {
       send(res, error.status || 500, { error: error.message || 'Trendyol stok bilgisi alınamadı.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/import-trendyol-records') {
+    try {
+      send(res, 200, await importTrendyolRecords(url));
+    } catch (error) {
+      send(res, error.status || 500, { error: error.message || 'Trendyol ürünleri ortak kayıtlara aktarılamadı.' });
     }
     return;
   }
@@ -254,7 +341,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/records') {
     const body = await readBody(req);
-    const name = String(body.name || '').trim().slice(0, 80);
+    const name = String(body.name || '').trim().slice(0, 180);
     const barcode = String(body.barcode || '').trim().slice(0, 80);
 
     if (!name) {
@@ -275,6 +362,42 @@ async function handleApi(req, res, url) {
     const nextRecords = [record, ...records].slice(0, 500);
     await writeRecords(nextRecords);
     send(res, 201, record);
+    return;
+  }
+
+  if (req.method === 'PATCH' && url.pathname === '/api/records') {
+    const id = String(url.searchParams.get('id') || '').trim();
+
+    if (!id) {
+      send(res, 400, { error: 'Geçersiz kayıt id.' });
+      return;
+    }
+
+    const body = await readBody(req);
+    const name = String(body.name || '').trim().slice(0, 180);
+    const barcode = String(body.barcode || '').trim().slice(0, 80);
+
+    if (!name) {
+      send(res, 400, { error: 'Kayıt adı gerekli.' });
+      return;
+    }
+
+    const calculation = calculate(body.inputs);
+    const records = await readRecords();
+    const nextRecords = records.map(record => {
+      if (record.id !== id) return record;
+
+      return {
+        id,
+        name,
+        barcode,
+        createdAt: record.createdAt || new Date().toISOString(),
+        ...calculation
+      };
+    });
+
+    await writeRecords(nextRecords);
+    send(res, 200, nextRecords.find(record => record.id === id));
     return;
   }
 
