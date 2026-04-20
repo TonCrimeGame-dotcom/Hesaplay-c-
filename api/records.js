@@ -1,7 +1,7 @@
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password'
 };
 
 function send(res, status, body) {
@@ -167,6 +167,15 @@ async function getBody(req) {
   });
 }
 
+function getHeader(req, name) {
+  return req.headers[name.toLowerCase()] || req.headers[name] || '';
+}
+
+function hasAdminAccess(req) {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  return Boolean(adminPassword) && getHeader(req, 'x-admin-password') === adminPassword;
+}
+
 async function fetchSupabase(path, options = {}) {
   const config = getSupabaseConfig();
 
@@ -226,6 +235,39 @@ module.exports = async function handler(req, res) {
       });
 
       send(res, 201, rowToRecord(rows[0]));
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      if (!process.env.ADMIN_PASSWORD) {
+        send(res, 503, { error: 'ADMIN_PASSWORD Vercel Environment Variables içine eklenmeli.' });
+        return;
+      }
+
+      if (!process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        send(res, 503, { error: 'Kayıt silmek için Vercel içine SUPABASE_SECRET_KEY veya SUPABASE_SERVICE_ROLE_KEY eklenmeli.' });
+        return;
+      }
+
+      if (!hasAdminAccess(req)) {
+        send(res, 401, { error: 'Yönetici şifresi hatalı.' });
+        return;
+      }
+
+      const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
+      const id = String(url.searchParams.get('id') || '').trim();
+
+      if (!/^[0-9a-f-]{36}$/i.test(id)) {
+        send(res, 400, { error: 'Geçersiz kayıt id.' });
+        return;
+      }
+
+      await fetchSupabase(`records?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Prefer: 'return=minimal' }
+      });
+
+      send(res, 200, { ok: true });
       return;
     }
 
