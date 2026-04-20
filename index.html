@@ -26,6 +26,36 @@
       box-shadow: 0 10px 30px rgba(0,0,0,.08);
       padding: 24px;
     }
+    .site-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .brand-logo {
+      display: block;
+      width: min(190px, 48vw);
+      height: auto;
+    }
+    .date-time-box {
+      text-align: right;
+      color: #374151;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+    .date-time-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+    }
+    .date-time-value {
+      display: block;
+      font-size: 18px;
+      font-weight: 800;
+    }
     h1 {
       margin: 0 0 8px;
       font-size: 28px;
@@ -59,7 +89,7 @@
       font-size: 14px;
       font-weight: 700;
     }
-    input, select {
+    input, select, textarea {
       width: 100%;
       border: 1px solid #d1d5db;
       border-radius: 12px;
@@ -67,8 +97,13 @@
       font-size: 16px;
       outline: none;
       background: #fff;
+      font-family: inherit;
     }
-    input:focus, select:focus {
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+    input:focus, select:focus, textarea:focus {
       border-color: #2563eb;
       box-shadow: 0 0 0 3px rgba(37,99,235,.12);
     }
@@ -200,6 +235,47 @@
       line-height: 1.5;
       background: #fafafa;
     }
+    .notes-section {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 24px;
+    }
+    .notes-form {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .notes-list {
+      display: grid;
+      gap: 10px;
+    }
+    .note-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .note-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .note-meta button {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+    .note-text {
+      margin: 0;
+      color: #374151;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
     .formula {
       margin-top: 18px;
       font-size: 14px;
@@ -212,6 +288,14 @@
     }
     @media (max-width: 720px) {
       .grid, .results { grid-template-columns: 1fr; }
+      .site-topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .date-time-box {
+        text-align: left;
+        white-space: normal;
+      }
       .result-value { font-size: 24px; }
       .wrap { margin: 0; padding: 10px; }
       .card { border-radius: 0; min-height: 100vh; }
@@ -221,6 +305,14 @@
 <body>
   <div class="wrap">
     <div class="card">
+      <div class="site-topbar">
+        <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
+        <div class="date-time-box" aria-live="polite">
+          <span class="date-time-label">Saat ve tarih</span>
+          <span class="date-time-value" id="dateTimeValue">Yükleniyor</span>
+        </div>
+      </div>
+
       <h1>E-Ticaret Kâr Hesaplayıcı</h1>
       <p class="desc">
         YİĞİT BEY UMARIM BEĞENİRSİNİZ VE İSTEDİĞİNİZ ÖZELLİĞİ EKLEYEBİLİRİZ.
@@ -325,6 +417,24 @@
         </div>
       </div>
 
+      <div class="notes-section">
+        <div class="saved-header">
+          <h2>Ortak notlar</h2>
+        </div>
+        <div class="notes-form">
+          <div class="field">
+            <label for="noteText">Not ekle</label>
+            <textarea id="noteText" maxlength="500" placeholder="Herkesin göreceği notu buraya yaz."></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn-primary" id="saveNoteBtn" type="button">Notu kaydet</button>
+          </div>
+        </div>
+        <div id="notesArea" class="empty-state">
+          Ortak notlar yükleniyor.
+        </div>
+      </div>
+
       <div class="footer-note">
         Not: Bu sürüm pratik kullanım için hazırlanmıştır. E-stopaj alanı varsayılan olarak %1 gelir.
         İstersen sonraki adımda buna reklam gideri, paketleme, KDV, iade zararı ve farklı pazaryeri komisyonlarını da ekleyebilirim.
@@ -334,6 +444,7 @@
 
   <script>
     let recordsCache = [];
+    let notesCache = [];
     let adminPassword = sessionStorage.getItem('recordsAdminPassword') || '';
     const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     const usesSeparateLocalServer = window.location.protocol === 'file:'
@@ -364,6 +475,10 @@
     const adminModeBtn = document.getElementById('adminModeBtn');
     const adminNote = document.getElementById('adminNote');
     const recordsArea = document.getElementById('recordsArea');
+    const dateTimeValue = document.getElementById('dateTimeValue');
+    const noteText = document.getElementById('noteText');
+    const saveNoteBtn = document.getElementById('saveNoteBtn');
+    const notesArea = document.getElementById('notesArea');
 
     function apiUrl(path) {
       return `${API_BASE}${path}`;
@@ -376,6 +491,13 @@
     function updateAdminUi() {
       adminNote.textContent = isAdminMode() ? 'Silme açık' : 'Silme kapalı';
       adminModeBtn.textContent = isAdminMode() ? 'Yönetici çıkışı' : 'Yönetici modu';
+    }
+
+    function updateClock() {
+      dateTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+        dateStyle: 'full',
+        timeStyle: 'medium'
+      }).format(new Date());
     }
 
     function num(v) {
@@ -531,6 +653,25 @@
       `;
     }
 
+    function renderNotes(notes) {
+      if (!notes.length) {
+        notesArea.className = 'empty-state';
+        notesArea.innerHTML = 'Henüz ortak not yok. İlk notu sen ekleyebilirsin.';
+        return;
+      }
+
+      notesArea.className = 'notes-list';
+      notesArea.innerHTML = notes.map(note => `
+        <div class="note-item">
+          <div class="note-meta">
+            ${formatDate(note.createdAt)}
+            ${isAdminMode() ? `<button class="btn-danger" type="button" data-action="delete-note" data-id="${note.id}">Sil</button>` : ''}
+          </div>
+          <p class="note-text">${escapeHtml(note.note)}</p>
+        </div>
+      `).join('');
+    }
+
     async function fetchRecords() {
       recordsArea.className = 'empty-state';
       recordsArea.innerHTML = 'Ortak kayıtlar yükleniyor.';
@@ -548,6 +689,26 @@
       } catch (error) {
         recordsArea.className = 'empty-state';
         recordsArea.innerHTML = escapeHtml(error.message);
+      }
+    }
+
+    async function fetchNotes() {
+      notesArea.className = 'empty-state';
+      notesArea.innerHTML = 'Ortak notlar yükleniyor.';
+
+      try {
+        const response = await fetch(apiUrl('/api/notes'));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Notlar alınamadı.');
+        }
+
+        notesCache = await response.json();
+        renderNotes(notesCache);
+      } catch (error) {
+        notesArea.className = 'empty-state';
+        notesArea.innerHTML = escapeHtml(error.message);
       }
     }
 
@@ -612,6 +773,60 @@
       }
     }
 
+    async function saveNote() {
+      const note = noteText.value.trim();
+
+      if (!note) {
+        alert('Not yazmalısın.');
+        noteText.focus();
+        return;
+      }
+
+      saveNoteBtn.disabled = true;
+      saveNoteBtn.textContent = 'Kaydediliyor...';
+
+      try {
+        const response = await fetch(apiUrl('/api/notes'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note })
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Not kaydedilemedi.');
+        }
+
+        noteText.value = '';
+        await fetchNotes();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        saveNoteBtn.disabled = false;
+        saveNoteBtn.textContent = 'Notu kaydet';
+      }
+    }
+
+    async function deleteNote(noteId) {
+      if (!confirm('Bu not silinsin mi?')) return;
+
+      try {
+        const response = await fetch(apiUrl(`/api/notes?id=${encodeURIComponent(noteId)}`), {
+          method: 'DELETE',
+          headers: { 'X-Admin-Password': adminPassword }
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Not silinemedi.');
+        }
+
+        await fetchNotes();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
     function loadRecord(record) {
       el.recordName.value = record.name || '';
 
@@ -643,6 +858,7 @@
 
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
+    saveNoteBtn.addEventListener('click', saveNote);
     resetBtn.addEventListener('click', resetForm);
     adminModeBtn.addEventListener('click', () => {
       if (isAdminMode()) {
@@ -650,6 +866,7 @@
         sessionStorage.removeItem('recordsAdminPassword');
         updateAdminUi();
         renderRecords(recordsCache);
+        renderNotes(notesCache);
         return;
       }
 
@@ -661,6 +878,7 @@
       sessionStorage.setItem('recordsAdminPassword', password);
       updateAdminUi();
       renderRecords(recordsCache);
+      renderNotes(notesCache);
     });
 
     recordsArea.addEventListener('click', event => {
@@ -678,9 +896,21 @@
       }
     });
 
+    notesArea.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      if (button.dataset.action === 'delete-note') {
+        deleteNote(button.dataset.id);
+      }
+    });
+
+    updateClock();
+    setInterval(updateClock, 1000);
     updateAdminUi();
     calculate();
     fetchRecords();
+    fetchNotes();
   </script>
 </body>
 </html>
