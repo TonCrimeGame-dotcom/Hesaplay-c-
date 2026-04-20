@@ -531,6 +531,11 @@
         </div>
 
         <div class="field">
+          <label for="recordBarcode">Trendyol barkod</label>
+          <input id="recordBarcode" type="text" placeholder="Trendyol ürün barkodu" />
+        </div>
+
+        <div class="field">
           <label for="salePrice">Satış fiyatı (TL)</label>
           <input id="salePrice" type="number" min="0" step="0.01" value="1000" />
         </div>
@@ -675,6 +680,7 @@
 
     const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     el.recordName = document.getElementById('recordName');
+    el.recordBarcode = document.getElementById('recordBarcode');
 
     const netSaleResult = document.getElementById('netSaleResult');
     const commissionResult = document.getElementById('commissionResult');
@@ -914,6 +920,17 @@
       return Number.isNaN(date.getTime()) ? '-' : formatDate(date);
     }
 
+    function normalizeBarcode(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function findProfitRecordForBarcode(barcode) {
+      const normalizedBarcode = normalizeBarcode(barcode);
+      if (!normalizedBarcode) return null;
+
+      return recordsCache.find(record => normalizeBarcode(record.barcode) === normalizedBarcode) || null;
+    }
+
     function updateStockTabs() {
       stockTabButtons.forEach(button => {
         button.classList.toggle('active', button.dataset.stockTab === activeStockTab);
@@ -947,6 +964,7 @@
               <th>Barkod</th>
               <th>Stok kodu</th>
               <th>Stok</th>
+              <th>Kayıtlı kâr</th>
               <th>Satış fiyatı</th>
               <th>Liste fiyatı</th>
               <th>Marka</th>
@@ -955,19 +973,26 @@
             </tr>
           </thead>
           <tbody>
-            ${items.map(item => `
+            ${items.map(item => {
+              const profitRecord = findProfitRecordForBarcode(item.barcode);
+              const profit = profitRecord?.results?.profit;
+
+              return `
               <tr>
                 <td>${escapeHtml(item.title || '-')}</td>
                 <td>${escapeHtml(item.barcode || '-')}</td>
                 <td>${escapeHtml(item.stockCode || '-')}</td>
                 <td class="stock-amount ${item.quantity <= 0 ? 'stock-low' : 'stock-ok'}">${item.quantity}</td>
+                <td class="${profitRecord ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : ''}">
+                  ${profitRecord ? tl(profit) : 'Kayıt yok'}
+                </td>
                 <td>${tl(item.salePrice)}</td>
                 <td>${tl(item.listPrice)}</td>
                 <td>${escapeHtml(item.brand || '-')}</td>
                 <td>${escapeHtml(item.categoryName || '-')}</td>
                 <td>${formatTrendyolDate(item.lastUpdateDate)}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       `;
@@ -1022,6 +1047,7 @@
           <thead>
             <tr>
               <th>Kayıt</th>
+              <th>Barkod</th>
               <th>Tarih</th>
               <th>Satış</th>
               <th>Alış</th>
@@ -1041,6 +1067,7 @@
               return `
               <tr>
                 <td>${escapeHtml(record.name)}</td>
+                <td>${escapeHtml(record.barcode || '-')}</td>
                 <td>${formatDate(record.createdAt)}</td>
                 <td>${tl(record.inputs.salePrice)}</td>
                 <td>${tl(record.inputs.purchasePrice)}</td>
@@ -1094,6 +1121,7 @@
 
         recordsCache = await response.json();
         renderRecords(recordsCache);
+        if (trendyolStockCache) renderTrendyolStock(trendyolStockCache);
       } catch (error) {
         recordsArea.className = 'empty-state';
         recordsArea.innerHTML = escapeHtml(error.message);
@@ -1123,6 +1151,7 @@
     async function saveRecord() {
       const calculation = calculate();
       const name = el.recordName.value.trim();
+      const barcode = el.recordBarcode.value.trim();
 
       if (!name) {
         alert('Ürün / kayıt adı yazmalısın.');
@@ -1139,6 +1168,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
+            barcode,
             inputs: calculation.inputs
           })
         });
@@ -1149,6 +1179,7 @@
         }
 
         el.recordName.value = '';
+        el.recordBarcode.value = '';
         await fetchRecords();
       } catch (error) {
         alert(error.message);
@@ -1235,6 +1266,7 @@
 
     function loadRecord(record) {
       el.recordName.value = record.name || '';
+      el.recordBarcode.value = record.barcode || '';
 
       Object.entries(record.inputs).forEach(([key, value]) => {
         if (el[key]) el[key].value = value;
@@ -1246,6 +1278,7 @@
 
     function resetForm() {
       el.recordName.value = '';
+      el.recordBarcode.value = '';
       el.salePrice.value = '1000';
       el.purchasePrice.value = '500';
       el.shippingFee.value = '80';
