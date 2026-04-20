@@ -1,6 +1,6 @@
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 
@@ -137,6 +137,24 @@ function recordToRow(name, barcode, calculation) {
   };
 }
 
+async function fetchAllRows(path, pageSize = 1000, maxRows = 20000) {
+  const rows = [];
+
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    const batch = await fetchSupabase(path, {
+      headers: { Range: `${offset}-${offset + pageSize - 1}` }
+    });
+
+    if (!Array.isArray(batch)) return batch;
+
+    rows.push(...batch);
+
+    if (batch.length < pageSize) break;
+  }
+
+  return rows;
+}
+
 async function getBody(req) {
   if (req.body && typeof req.body === 'object') {
     return req.body;
@@ -207,14 +225,14 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const rows = await fetchSupabase('records?select=*&order=profit.desc,created_at.desc&limit=500');
+      const rows = await fetchAllRows('records?select=*&order=profit.desc,created_at.desc');
       send(res, 200, rows.map(rowToRecord));
       return;
     }
 
     if (req.method === 'POST') {
       const body = await getBody(req);
-      const name = String(body.name || '').trim().slice(0, 80);
+      const name = String(body.name || '').trim().slice(0, 180);
       const barcode = String(body.barcode || '').trim().slice(0, 80);
 
       if (!name) {
@@ -229,6 +247,34 @@ module.exports = async function handler(req, res) {
       });
 
       send(res, 201, rowToRecord(rows[0]));
+      return;
+    }
+
+    if (req.method === 'PATCH') {
+      const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
+      const id = String(url.searchParams.get('id') || '').trim();
+
+      if (!/^[0-9a-f-]{36}$/i.test(id)) {
+        send(res, 400, { error: 'Geçersiz kayıt id.' });
+        return;
+      }
+
+      const body = await getBody(req);
+      const name = String(body.name || '').trim().slice(0, 180);
+      const barcode = String(body.barcode || '').trim().slice(0, 80);
+
+      if (!name) {
+        send(res, 400, { error: 'Kayıt adı gerekli.' });
+        return;
+      }
+
+      const calculation = calculate(body.inputs);
+      const rows = await fetchSupabase(`records?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(recordToRow(name, barcode, calculation))
+      });
+
+      send(res, 200, rowToRecord(rows[0]));
       return;
     }
 
