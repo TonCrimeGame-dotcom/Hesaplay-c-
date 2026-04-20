@@ -56,6 +56,54 @@
       font-size: 18px;
       font-weight: 800;
     }
+    .topbar-tools {
+      display: grid;
+      gap: 10px;
+      justify-items: end;
+      min-width: 270px;
+    }
+    .euro-tool {
+      width: 100%;
+      max-width: 310px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fafc;
+    }
+    .euro-title {
+      margin-bottom: 8px;
+      color: #374151;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: right;
+    }
+    .euro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .euro-field label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .euro-field input {
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 14px;
+    }
+    .euro-result {
+      margin-top: 8px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #059669;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: right;
+    }
     h1 {
       margin: 0 0 8px;
       font-size: 28px;
@@ -185,7 +233,7 @@
       font-size: 22px;
     }
     .admin-controls {
-      display: flex;
+      display: none;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
@@ -296,6 +344,18 @@
         text-align: left;
         white-space: normal;
       }
+      .topbar-tools {
+        justify-items: stretch;
+        min-width: 0;
+        width: 100%;
+      }
+      .euro-tool {
+        max-width: none;
+      }
+      .euro-title,
+      .euro-result {
+        text-align: left;
+      }
       .result-value { font-size: 24px; }
       .wrap { margin: 0; padding: 10px; }
       .card { border-radius: 0; min-height: 100vh; }
@@ -307,9 +367,25 @@
     <div class="card">
       <div class="site-topbar">
         <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
-        <div class="date-time-box" aria-live="polite">
-          <span class="date-time-label">Saat ve tarih</span>
-          <span class="date-time-value" id="dateTimeValue">Yükleniyor</span>
+        <div class="topbar-tools">
+          <div class="date-time-box" aria-live="polite">
+            <span class="date-time-label">Almanya / Düsseldorf</span>
+            <span class="date-time-value" id="dateTimeValue">Yükleniyor</span>
+          </div>
+          <div class="euro-tool" aria-label="Euro TL hesaplayıcı">
+            <div class="euro-title">Euro / TL</div>
+            <div class="euro-grid">
+              <div class="euro-field">
+                <label for="eurAmount">Euro</label>
+                <input id="eurAmount" type="number" min="0" step="0.01" value="1" />
+              </div>
+              <div class="euro-field">
+                <label for="eurRate">Kur</label>
+                <input id="eurRate" type="number" min="0" step="0.0001" placeholder="Örn: 45.25" />
+              </div>
+            </div>
+            <div class="euro-result" id="eurTryResult">Kur gir</div>
+          </div>
         </div>
       </div>
 
@@ -445,7 +521,6 @@
   <script>
     let recordsCache = [];
     let notesCache = [];
-    let adminPassword = sessionStorage.getItem('recordsAdminPassword') || '';
     const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     const usesSeparateLocalServer = window.location.protocol === 'file:'
       || (isLocalHost && window.location.port && window.location.port !== '3000');
@@ -472,10 +547,11 @@
     const calculateBtn = document.getElementById('calculateBtn');
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
-    const adminModeBtn = document.getElementById('adminModeBtn');
-    const adminNote = document.getElementById('adminNote');
     const recordsArea = document.getElementById('recordsArea');
     const dateTimeValue = document.getElementById('dateTimeValue');
+    const eurAmount = document.getElementById('eurAmount');
+    const eurRate = document.getElementById('eurRate');
+    const eurTryResult = document.getElementById('eurTryResult');
     const noteText = document.getElementById('noteText');
     const saveNoteBtn = document.getElementById('saveNoteBtn');
     const notesArea = document.getElementById('notesArea');
@@ -484,19 +560,11 @@
       return `${API_BASE}${path}`;
     }
 
-    function isAdminMode() {
-      return Boolean(adminPassword);
-    }
-
-    function updateAdminUi() {
-      adminNote.textContent = isAdminMode() ? 'Silme açık' : 'Silme kapalı';
-      adminModeBtn.textContent = isAdminMode() ? 'Yönetici çıkışı' : 'Yönetici modu';
-    }
-
     function updateClock() {
       dateTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
-        dateStyle: 'full',
-        timeStyle: 'medium'
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+        timeZone: 'Europe/Berlin'
       }).format(new Date());
     }
 
@@ -512,6 +580,18 @@
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       }).format(v || 0);
+    }
+
+    function calculateEuroTry() {
+      const amount = num(eurAmount.value);
+      const rate = num(eurRate.value);
+
+      if (!rate) {
+        eurTryResult.textContent = 'Kur gir';
+        return;
+      }
+
+      eurTryResult.textContent = tl(amount * rate);
     }
 
     function percent(v) {
@@ -643,7 +723,7 @@
                 <td>
                   <div class="table-actions">
                     <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
-                    ${isAdminMode() ? `<button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>` : ''}
+                    <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
                   </div>
                 </td>
               </tr>
@@ -665,7 +745,7 @@
         <div class="note-item">
           <div class="note-meta">
             ${formatDate(note.createdAt)}
-            ${isAdminMode() ? `<button class="btn-danger" type="button" data-action="delete-note" data-id="${note.id}">Sil</button>` : ''}
+            <button class="btn-danger" type="button" data-action="delete-note" data-id="${note.id}">Sil</button>
           </div>
           <p class="note-text">${escapeHtml(note.note)}</p>
         </div>
@@ -758,8 +838,7 @@
 
       try {
         const response = await fetch(apiUrl(`/api/records?id=${encodeURIComponent(recordId)}`), {
-          method: 'DELETE',
-          headers: { 'X-Admin-Password': adminPassword }
+          method: 'DELETE'
         });
 
         if (!response.ok) {
@@ -812,8 +891,7 @@
 
       try {
         const response = await fetch(apiUrl(`/api/notes?id=${encodeURIComponent(noteId)}`), {
-          method: 'DELETE',
-          headers: { 'X-Admin-Password': adminPassword }
+          method: 'DELETE'
         });
 
         if (!response.ok) {
@@ -856,30 +934,12 @@
       el[id].addEventListener('change', calculate);
     });
 
+    eurAmount.addEventListener('input', calculateEuroTry);
+    eurRate.addEventListener('input', calculateEuroTry);
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
     saveNoteBtn.addEventListener('click', saveNote);
     resetBtn.addEventListener('click', resetForm);
-    adminModeBtn.addEventListener('click', () => {
-      if (isAdminMode()) {
-        adminPassword = '';
-        sessionStorage.removeItem('recordsAdminPassword');
-        updateAdminUi();
-        renderRecords(recordsCache);
-        renderNotes(notesCache);
-        return;
-      }
-
-      const password = prompt('Yönetici şifresini yaz:');
-
-      if (!password) return;
-
-      adminPassword = password;
-      sessionStorage.setItem('recordsAdminPassword', password);
-      updateAdminUi();
-      renderRecords(recordsCache);
-      renderNotes(notesCache);
-    });
 
     recordsArea.addEventListener('click', event => {
       const button = event.target.closest('button[data-action]');
@@ -907,7 +967,7 @@
 
     updateClock();
     setInterval(updateClock, 1000);
-    updateAdminUi();
+    calculateEuroTry();
     calculate();
     fetchRecords();
     fetchNotes();
