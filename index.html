@@ -116,6 +116,67 @@
       background: #e5e7eb;
       color: #111827;
     }
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .saved-section {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 24px;
+    }
+    .saved-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .saved-header h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .records-table-wrap {
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      background: #fff;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    th {
+      background: #f8fafc;
+      color: #374151;
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+    .table-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .table-actions button {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    .empty-state {
+      border: 1px dashed #d1d5db;
+      border-radius: 12px;
+      padding: 16px;
+      color: #6b7280;
+      line-height: 1.5;
+      background: #fafafa;
+    }
     .formula {
       margin-top: 18px;
       font-size: 14px;
@@ -144,6 +205,11 @@
       </p>
 
       <div class="grid">
+        <div class="field">
+          <label for="recordName">Kayıt adı</label>
+          <input id="recordName" type="text" placeholder="Örn: Trendyol kulaklık" />
+        </div>
+
         <div class="field">
           <label for="salePrice">Satış fiyatı (TL)</label>
           <input id="salePrice" type="number" min="0" step="0.01" value="1000" />
@@ -215,11 +281,22 @@
 
       <div class="actions">
         <button class="btn-primary" id="calculateBtn">Hesapla</button>
+        <button class="btn-secondary" id="saveBtn">Kaydet</button>
         <button class="btn-secondary" id="resetBtn">Sıfırla</button>
       </div>
 
       <div class="formula" id="formulaText">
         Formül: Kâr = Satış fiyatı - Alış fiyatı - Kargo - Komisyon bedeli - E-stopaj bedeli
+      </div>
+
+      <div class="saved-section">
+        <div class="saved-header">
+          <h2>Kayıtlar</h2>
+          <button class="btn-danger" id="clearRecordsBtn" type="button">Hepsini sil</button>
+        </div>
+        <div id="recordsArea" class="empty-state">
+          Henüz kayıt yok. Bilgileri girip Kaydet'e basınca hesaplaman burada saklanır.
+        </div>
       </div>
 
       <div class="footer-note">
@@ -230,6 +307,7 @@
   </div>
 
   <script>
+    const STORAGE_KEY = 'ecommerceProfitRecords';
     const ids = [
       'salePrice',
       'purchasePrice',
@@ -242,6 +320,7 @@
     ];
 
     const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    el.recordName = document.getElementById('recordName');
 
     const netSaleResult = document.getElementById('netSaleResult');
     const commissionResult = document.getElementById('commissionResult');
@@ -249,7 +328,10 @@
     const profitResult = document.getElementById('profitResult');
     const formulaText = document.getElementById('formulaText');
     const calculateBtn = document.getElementById('calculateBtn');
+    const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const clearRecordsBtn = document.getElementById('clearRecordsBtn');
+    const recordsArea = document.getElementById('recordsArea');
 
     function num(v) {
       const n = parseFloat(v);
@@ -265,7 +347,7 @@
       }).format(v || 0);
     }
 
-    function calculate() {
+    function getCalculation() {
       const salePrice = num(el.salePrice.value);
       const purchasePrice = num(el.purchasePrice.value);
       const shippingFee = num(el.shippingFee.value);
@@ -284,6 +366,31 @@
       const withholdingFee = saleNet * (withholdingRate / 100);
       const profit = salePrice - purchasePrice - shippingFee - commissionFee - withholdingFee;
 
+      return {
+        inputs: {
+          salePrice,
+          purchasePrice,
+          shippingFee,
+          commissionRate,
+          withholdingRate,
+          vatRate,
+          saleMode,
+          commissionBase
+        },
+        results: {
+          saleNet,
+          commissionFee,
+          withholdingFee,
+          profit
+        }
+      };
+    }
+
+    function calculate() {
+      const calculation = getCalculation();
+      const { salePrice, purchasePrice, shippingFee } = calculation.inputs;
+      const { saleNet, commissionFee, withholdingFee, profit } = calculation.results;
+
       netSaleResult.textContent = tl(saleNet);
       commissionResult.textContent = tl(commissionFee);
       withholdingResult.textContent = tl(withholdingFee);
@@ -297,9 +404,123 @@
         - <strong>${tl(commissionFee)}</strong> - <strong>${tl(withholdingFee)}</strong> =
         <strong>${tl(profit)}</strong>
       `;
+
+      return calculation;
+    }
+
+    function getRecords() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function setRecords(records) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatDate(value) {
+      return new Intl.DateTimeFormat('tr-TR', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      }).format(new Date(value));
+    }
+
+    function renderRecords() {
+      const records = getRecords();
+      clearRecordsBtn.disabled = records.length === 0;
+
+      if (!records.length) {
+        recordsArea.className = 'empty-state';
+        recordsArea.innerHTML = "Henüz kayıt yok. Bilgileri girip Kaydet'e basınca hesaplaman burada saklanır.";
+        return;
+      }
+
+      recordsArea.className = 'records-table-wrap';
+      recordsArea.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Kayıt</th>
+              <th>Tarih</th>
+              <th>Satış</th>
+              <th>Alış</th>
+              <th>Kargo</th>
+              <th>Komisyon</th>
+              <th>Net kâr</th>
+              <th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map(record => `
+              <tr>
+                <td>${escapeHtml(record.name)}</td>
+                <td>${formatDate(record.createdAt)}</td>
+                <td>${tl(record.inputs.salePrice)}</td>
+                <td>${tl(record.inputs.purchasePrice)}</td>
+                <td>${tl(record.inputs.shippingFee)}</td>
+                <td>${tl(record.results.commissionFee)}</td>
+                <td class="${record.results.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${tl(record.results.profit)}</td>
+                <td>
+                  <div class="table-actions">
+                    <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
+                    <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function saveRecord() {
+      const calculation = calculate();
+      const records = getRecords();
+      const name = el.recordName.value.trim() || `Kayıt ${records.length + 1}`;
+
+      const record = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name,
+        createdAt: new Date().toISOString(),
+        inputs: calculation.inputs,
+        results: calculation.results
+      };
+
+      setRecords([record, ...records]);
+      el.recordName.value = '';
+      renderRecords();
+    }
+
+    function loadRecord(record) {
+      el.recordName.value = record.name || '';
+
+      Object.entries(record.inputs).forEach(([key, value]) => {
+        if (el[key]) el[key].value = value;
+      });
+
+      calculate();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteRecord(recordId) {
+      const records = getRecords().filter(record => record.id !== recordId);
+      setRecords(records);
+      renderRecords();
     }
 
     function resetForm() {
+      el.recordName.value = '';
       el.salePrice.value = '1000';
       el.purchasePrice.value = '500';
       el.shippingFee.value = '80';
@@ -317,9 +538,32 @@
     });
 
     calculateBtn.addEventListener('click', calculate);
+    saveBtn.addEventListener('click', saveRecord);
     resetBtn.addEventListener('click', resetForm);
+    clearRecordsBtn.addEventListener('click', () => {
+      if (!confirm('Tüm kayıtları silmek istediğine emin misin?')) return;
+      setRecords([]);
+      renderRecords();
+    });
+
+    recordsArea.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      const records = getRecords();
+      const record = records.find(item => item.id === button.dataset.id);
+
+      if (button.dataset.action === 'load' && record) {
+        loadRecord(record);
+      }
+
+      if (button.dataset.action === 'delete') {
+        deleteRecord(button.dataset.id);
+      }
+    });
 
     calculate();
+    renderRecords();
   </script>
 </body>
 </html>
