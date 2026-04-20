@@ -1,7 +1,7 @@
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password'
+  'Access-Control-Allow-Headers': 'Content-Type'
 };
 
 function send(res, status, body) {
@@ -41,15 +41,6 @@ function supabaseHeaders(key) {
   }
 
   return headers;
-}
-
-function getHeader(req, name) {
-  return req.headers[name.toLowerCase()] || req.headers[name] || '';
-}
-
-function hasAdminAccess(req) {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  return Boolean(adminPassword) && getHeader(req, 'x-admin-password') === adminPassword;
 }
 
 function rowToNote(row) {
@@ -149,21 +140,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      if (!process.env.ADMIN_PASSWORD) {
-        send(res, 503, { error: 'ADMIN_PASSWORD Vercel Environment Variables içine eklenmeli.' });
-        return;
-      }
-
-      if (!process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        send(res, 503, { error: 'Not silmek için Vercel içine SUPABASE_SECRET_KEY veya SUPABASE_SERVICE_ROLE_KEY eklenmeli.' });
-        return;
-      }
-
-      if (!hasAdminAccess(req)) {
-        send(res, 401, { error: 'Yönetici şifresi hatalı.' });
-        return;
-      }
-
       const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
       const id = String(url.searchParams.get('id') || '').trim();
 
