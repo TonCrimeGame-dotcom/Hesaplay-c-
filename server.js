@@ -151,7 +151,101 @@ function readBody(req) {
   });
 }
 
+function getTrendyolConfig() {
+  const sellerId = process.env.TRENDYOL_SELLER_ID || process.env.TRENDYOL_SUPPLIER_ID;
+  const apiKey = process.env.TRENDYOL_API_KEY;
+  const apiSecret = process.env.TRENDYOL_API_SECRET;
+  const userAgent = process.env.TRENDYOL_USER_AGENT || (sellerId ? `${sellerId} - SelfIntegration` : '');
+
+  if (!sellerId || !apiKey || !apiSecret || !userAgent) {
+    return null;
+  }
+
+  return { sellerId, apiKey, apiSecret, userAgent };
+}
+
+function normalizeTrendyolProduct(item) {
+  return {
+    title: item.title || '',
+    barcode: item.barcode || '',
+    stockCode: item.stockCode || '',
+    quantity: Number(item.quantity || 0),
+    salePrice: Number(item.salePrice || 0),
+    listPrice: Number(item.listPrice || 0),
+    brand: item.brand || '',
+    categoryName: item.categoryName || '',
+    approved: Boolean(item.approved),
+    archived: Boolean(item.archived),
+    onSale: item.onSale ?? null,
+    lastUpdateDate: item.lastUpdateDate || item.lastModifiedDate || null
+  };
+}
+
+function getTrendyolAuth(apiKey, apiSecret) {
+  return Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+}
+
+async function getTrendyolStock(url) {
+  const config = getTrendyolConfig();
+
+  if (!config) {
+    const error = new Error('Trendyol ayarları eksik. TRENDYOL_SELLER_ID, TRENDYOL_API_KEY, TRENDYOL_API_SECRET ve TRENDYOL_USER_AGENT eklenmeli.');
+    error.status = 503;
+    throw error;
+  }
+
+  const page = Math.max(0, Number.parseInt(url.searchParams.get('page') || '0', 10) || 0);
+  const size = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get('size') || '50', 10) || 50));
+  const barcode = String(url.searchParams.get('barcode') || '').trim();
+  const stockCode = String(url.searchParams.get('stockCode') || '').trim();
+  const trendyolUrl = new URL(`https://apigw.trendyol.com/integration/product/sellers/${encodeURIComponent(config.sellerId)}/products`);
+
+  trendyolUrl.searchParams.set('approved', 'true');
+  trendyolUrl.searchParams.set('archived', 'false');
+  trendyolUrl.searchParams.set('page', String(page));
+  trendyolUrl.searchParams.set('size', String(size));
+  if (barcode) trendyolUrl.searchParams.set('barcode', barcode);
+  if (stockCode) trendyolUrl.searchParams.set('stockCode', stockCode);
+
+  const response = await fetch(trendyolUrl, {
+    headers: {
+      Authorization: `Basic ${getTrendyolAuth(config.apiKey, config.apiSecret)}`,
+      'User-Agent': config.userAgent,
+      Accept: 'application/json'
+    }
+  });
+
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    const error = new Error(payload?.message || payload?.errors?.[0]?.message || payload?.exception || 'Trendyol stok bilgisi alınamadı.');
+    error.status = response.status;
+    throw error;
+  }
+
+  const content = Array.isArray(payload.content) ? payload.content : [];
+
+  return {
+    page: payload.page ?? page,
+    size: payload.size ?? size,
+    totalPages: payload.totalPages ?? 0,
+    totalElements: payload.totalElements ?? content.length,
+    items: content.map(normalizeTrendyolProduct),
+    fetchedAt: new Date().toISOString()
+  };
+}
+
 async function handleApi(req, res, url) {
+  if (req.method === 'GET' && url.pathname === '/api/trendyol-stock') {
+    try {
+      send(res, 200, await getTrendyolStock(url));
+    } catch (error) {
+      send(res, error.status || 500, { error: error.message || 'Trendyol stok bilgisi alınamadı.' });
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/records') {
     const records = await readRecords();
     send(res, 200, records);
