@@ -15,7 +15,7 @@ const DATA_DIR = path.dirname(DATA_FILE);
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password'
+  'Access-Control-Allow-Headers': 'Content-Type'
 };
 
 function send(res, status, body, headers = {}) {
@@ -183,16 +183,6 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === 'DELETE' && url.pathname === '/api/records') {
-    if (!process.env.ADMIN_PASSWORD) {
-      send(res, 503, { error: 'ADMIN_PASSWORD ortam değişkeni eklenmeli.' });
-      return;
-    }
-
-    if ((req.headers['x-admin-password'] || '') !== process.env.ADMIN_PASSWORD) {
-      send(res, 401, { error: 'Yönetici şifresi hatalı.' });
-      return;
-    }
-
     const id = String(url.searchParams.get('id') || '').trim();
 
     if (!id) {
@@ -234,16 +224,6 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === 'DELETE' && url.pathname === '/api/notes') {
-    if (!process.env.ADMIN_PASSWORD) {
-      send(res, 503, { error: 'ADMIN_PASSWORD ortam değişkeni eklenmeli.' });
-      return;
-    }
-
-    if ((req.headers['x-admin-password'] || '') !== process.env.ADMIN_PASSWORD) {
-      send(res, 401, { error: 'Yönetici şifresi hatalı.' });
-      return;
-    }
-
     const id = String(url.searchParams.get('id') || '').trim();
 
     if (!id) {
