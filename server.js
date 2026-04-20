@@ -11,8 +11,8 @@ const DATA_FILE = process.env.DATA_FILE
 const DATA_DIR = path.dirname(DATA_FILE);
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password'
 };
 
 function send(res, status, body, headers = {}) {
@@ -160,6 +160,30 @@ async function handleApi(req, res, url) {
     const nextRecords = [record, ...records].slice(0, 500);
     await writeRecords(nextRecords);
     send(res, 201, record);
+    return;
+  }
+
+  if (req.method === 'DELETE' && url.pathname === '/api/records') {
+    if (!process.env.ADMIN_PASSWORD) {
+      send(res, 503, { error: 'ADMIN_PASSWORD ortam değişkeni eklenmeli.' });
+      return;
+    }
+
+    if ((req.headers['x-admin-password'] || '') !== process.env.ADMIN_PASSWORD) {
+      send(res, 401, { error: 'Yönetici şifresi hatalı.' });
+      return;
+    }
+
+    const id = String(url.searchParams.get('id') || '').trim();
+
+    if (!id) {
+      send(res, 400, { error: 'Geçersiz kayıt id.' });
+      return;
+    }
+
+    const records = await readRecords();
+    await writeRecords(records.filter(record => record.id !== id));
+    send(res, 200, { ok: true });
     return;
   }
 
