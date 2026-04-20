@@ -9,15 +9,26 @@ const DATA_FILE = process.env.DATA_FILE
   ? path.resolve(process.env.DATA_FILE)
   : path.join(ROOT, 'data', 'records.json');
 const DATA_DIR = path.dirname(DATA_FILE);
+const DEFAULT_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type'
+};
 
 function send(res, status, body, headers = {}) {
   const payload = typeof body === 'string' ? body : JSON.stringify(body);
   res.writeHead(status, {
     'Content-Type': typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
+    ...DEFAULT_HEADERS,
     ...headers
   });
   res.end(payload);
+}
+
+function sendNoContent(res) {
+  res.writeHead(204, DEFAULT_HEADERS);
+  res.end();
 }
 
 function sendFile(res, filePath, contentType) {
@@ -25,7 +36,8 @@ function sendFile(res, filePath, contentType) {
     .then(content => {
       res.writeHead(200, {
         'Content-Type': contentType,
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        ...DEFAULT_HEADERS
       });
       res.end(content);
     })
@@ -158,6 +170,11 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
+    if (req.method === 'OPTIONS') {
+      sendNoContent(res);
+      return;
+    }
+
     if (url.pathname.startsWith('/api/')) {
       await handleApi(req, res, url);
       return;
@@ -170,6 +187,11 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/' || url.pathname === '/index.html') {
       await sendFile(res, path.join(ROOT, 'index.html'), 'text/html; charset=utf-8');
+      return;
+    }
+
+    if (url.pathname === '/favicon.ico') {
+      sendNoContent(res);
       return;
     }
 
