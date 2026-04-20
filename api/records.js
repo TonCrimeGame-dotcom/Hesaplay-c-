@@ -97,6 +97,7 @@ function rowToRecord(row) {
   return {
     id: row.id,
     name: row.name,
+    barcode: row.barcode || '',
     createdAt: row.created_at,
     inputs: {
       salePrice: Number(row.sale_price),
@@ -117,9 +118,10 @@ function rowToRecord(row) {
   };
 }
 
-function recordToRow(name, calculation) {
+function recordToRow(name, barcode, calculation) {
   return {
     name,
+    barcode,
     sale_price: calculation.inputs.salePrice,
     purchase_price: calculation.inputs.purchasePrice,
     shipping_fee: calculation.inputs.shippingFee,
@@ -213,6 +215,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'POST') {
       const body = await getBody(req);
       const name = String(body.name || '').trim().slice(0, 80);
+      const barcode = String(body.barcode || '').trim().slice(0, 80);
 
       if (!name) {
         send(res, 400, { error: 'Kayıt adı gerekli.' });
@@ -222,7 +225,7 @@ module.exports = async function handler(req, res) {
       const calculation = calculate(body.inputs);
       const rows = await fetchSupabase('records', {
         method: 'POST',
-        body: JSON.stringify(recordToRow(name, calculation))
+        body: JSON.stringify(recordToRow(name, barcode, calculation))
       });
 
       send(res, 201, rowToRecord(rows[0]));
