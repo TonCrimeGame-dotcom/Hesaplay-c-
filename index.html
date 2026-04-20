@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
   <title>E-Ticaret Kâr Hesaplayıcı</title>
   <style>
     * { box-sizing: border-box; }
@@ -499,14 +500,15 @@
         const response = await fetch(apiUrl('/api/records'));
 
         if (!response.ok) {
-          throw new Error('Kayıtlar alınamadı.');
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Kayıtlar alınamadı.');
         }
 
         recordsCache = await response.json();
         renderRecords(recordsCache);
       } catch (error) {
         recordsArea.className = 'empty-state';
-        recordsArea.innerHTML = 'Ortak kayıtlar için backend çalışmalı. Terminalde node server.js çalıştırıp http://localhost:3000 adresinden girebilirsin.';
+        recordsArea.innerHTML = escapeHtml(error.message);
       }
     }
 
