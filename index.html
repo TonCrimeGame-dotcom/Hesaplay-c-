@@ -307,6 +307,10 @@
 
   <script>
     let recordsCache = [];
+    const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const usesSeparateLocalServer = window.location.protocol === 'file:'
+      || (isLocalHost && window.location.port && window.location.port !== '3000');
+    const API_BASE = usesSeparateLocalServer ? 'http://localhost:3000' : '';
     const ids = [
       'salePrice',
       'purchasePrice',
@@ -330,6 +334,10 @@
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
     const recordsArea = document.getElementById('recordsArea');
+
+    function apiUrl(path) {
+      return `${API_BASE}${path}`;
+    }
 
     function num(v) {
       const n = parseFloat(v);
@@ -488,7 +496,7 @@
       recordsArea.innerHTML = 'Ortak kayıtlar yükleniyor.';
 
       try {
-        const response = await fetch('/api/records');
+        const response = await fetch(apiUrl('/api/records'));
 
         if (!response.ok) {
           throw new Error('Kayıtlar alınamadı.');
@@ -498,7 +506,7 @@
         renderRecords(recordsCache);
       } catch (error) {
         recordsArea.className = 'empty-state';
-        recordsArea.innerHTML = 'Ortak kayıtlar için siteyi sunucu üzerinden açmalısın. Terminalde node server.js çalıştırıp http://localhost:3000 adresinden gir.';
+        recordsArea.innerHTML = 'Ortak kayıtlar için backend çalışmalı. Terminalde node server.js çalıştırıp http://localhost:3000 adresinden girebilirsin.';
       }
     }
 
@@ -516,7 +524,7 @@
       saveBtn.textContent = 'Kaydediliyor...';
 
       try {
-        const response = await fetch('/api/records', {
+        const response = await fetch(apiUrl('/api/records'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
