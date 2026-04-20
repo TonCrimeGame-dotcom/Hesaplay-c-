@@ -333,6 +333,18 @@
       font-size: 13px;
       line-height: 1.4;
     }
+    .record-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .record-status {
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.4;
+    }
     .stock-tabs {
       display: flex;
       gap: 8px;
@@ -513,6 +525,10 @@
       .stock-controls {
         grid-template-columns: 1fr;
       }
+      .record-tools {
+        align-items: stretch;
+        flex-direction: column;
+      }
       .stock-table {
         display: none;
       }
@@ -668,6 +684,11 @@
             <button class="btn-secondary" id="adminModeBtn" type="button">Yönetici modu</button>
           </div>
         </div>
+        <div class="record-tools">
+          <button class="btn-secondary" id="importTrendyolRecordsBtn" type="button">Trendyol ürünlerini ortak kayıtlara aktar</button>
+          <button class="btn-secondary" id="cancelEditBtn" type="button" hidden>Yeni kayıt moduna geç</button>
+          <span class="record-status" id="recordEditStatus">Kayıtlar barkoda göre eşleşir.</span>
+        </div>
         <div id="recordsArea" class="empty-state">
           Ortak kayıtlar yükleniyor.
         </div>
@@ -723,6 +744,7 @@
     let notesCache = [];
     let trendyolStockCache = null;
     let activeStockTab = 'available';
+    let editingRecordId = null;
     let eurTryRate = 0;
     let currencySource = 'eur';
     const RATE_CACHE_KEY = 'eurTryRateCache';
@@ -765,6 +787,9 @@
     const trendyolStockStatus = document.getElementById('trendyolStockStatus');
     const trendyolStockArea = document.getElementById('trendyolStockArea');
     const stockTabButtons = Array.from(document.querySelectorAll('[data-stock-tab]'));
+    const importTrendyolRecordsBtn = document.getElementById('importTrendyolRecordsBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const recordEditStatus = document.getElementById('recordEditStatus');
     const noteText = document.getElementById('noteText');
     const saveNoteBtn = document.getElementById('saveNoteBtn');
     const notesArea = document.getElementById('notesArea');
@@ -990,6 +1015,15 @@
       if (!normalizedBarcode) return null;
 
       return recordsCache.find(record => normalizeBarcode(record.barcode) === normalizedBarcode) || null;
+    }
+
+    function setEditingRecord(record) {
+      editingRecordId = record?.id || null;
+      saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
+      cancelEditBtn.hidden = !editingRecordId;
+      recordEditStatus.textContent = editingRecordId
+        ? `"${record.name}" düzenleniyor. Geliş fiyatını değiştirip Kaydı güncelle diyebilirsin.`
+        : 'Kayıtlar barkoda göre eşleşir.';
     }
 
     function updateStockTabs() {
@@ -1244,8 +1278,11 @@
       saveBtn.textContent = 'Kaydediliyor...';
 
       try {
-        const response = await fetch(apiUrl('/api/records'), {
-          method: 'POST',
+        const url = editingRecordId
+          ? `/api/records?id=${encodeURIComponent(editingRecordId)}`
+          : '/api/records';
+        const response = await fetch(apiUrl(url), {
+          method: editingRecordId ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
@@ -1261,12 +1298,13 @@
 
         el.recordName.value = '';
         el.recordBarcode.value = '';
+        setEditingRecord(null);
         await fetchRecords();
       } catch (error) {
         alert(error.message);
       } finally {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Kaydet';
+        saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
       }
     }
 
@@ -1286,9 +1324,55 @@
           throw new Error(error.error || 'Kayıt silinemedi.');
         }
 
+        if (editingRecordId === recordId) setEditingRecord(null);
         await fetchRecords();
       } catch (error) {
         alert(error.message);
+      }
+    }
+
+    async function importTrendyolRecords() {
+      if (!confirm('Trendyol ürünleri ortak kayıtlara aktarılsın mı? Var olan barkodların satış bilgisi güncellenir, geliş fiyatı korunur.')) return;
+
+      importTrendyolRecordsBtn.disabled = true;
+      importTrendyolRecordsBtn.textContent = 'Aktarılıyor...';
+      recordEditStatus.textContent = 'Trendyol ürünleri ortak kayıtlara aktarılıyor.';
+
+      try {
+        let created = 0;
+        let updated = 0;
+        let skipped = 0;
+        let startPage = 0;
+        let totalPages = 1;
+
+        do {
+          recordEditStatus.textContent = `Trendyol ürünleri aktarılıyor. Sayfa ${startPage + 1}/${totalPages}.`;
+          const response = await fetch(apiUrl(`/api/import-trendyol-records?size=50&maxPages=1&startPage=${startPage}`), {
+            method: 'POST'
+          });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Trendyol ürünleri aktarılamadı.');
+          }
+
+          const result = await response.json();
+          created += result.created || 0;
+          updated += result.updated || 0;
+          skipped += result.skipped || 0;
+          totalPages = result.totalPages || totalPages;
+          startPage = result.nextPage || totalPages;
+        } while (startPage < totalPages);
+
+        recordEditStatus.textContent = `${created} yeni kayıt, ${updated} güncelleme yapıldı. ${skipped} ürün atlandı.`;
+        await fetchRecords();
+        await fetchTrendyolStock();
+      } catch (error) {
+        recordEditStatus.textContent = 'Aktarım tamamlanamadı.';
+        alert(error.message);
+      } finally {
+        importTrendyolRecordsBtn.disabled = false;
+        importTrendyolRecordsBtn.textContent = 'Trendyol ürünlerini ortak kayıtlara aktar';
       }
     }
 
@@ -1348,6 +1432,7 @@
     function loadRecord(record) {
       el.recordName.value = record.name || '';
       el.recordBarcode.value = record.barcode || '';
+      setEditingRecord(record);
 
       Object.entries(record.inputs).forEach(([key, value]) => {
         if (el[key]) el[key].value = value;
@@ -1367,6 +1452,7 @@
       el.withholdingRate.value = '1';
       el.vatRate.value = '1';
       calculate();
+      setEditingRecord(null);
     }
 
     ids.forEach(id => {
@@ -1378,6 +1464,8 @@
     tryAmount.addEventListener('input', () => calculateEuroTry('try'));
     refreshRateBtn.addEventListener('click', fetchEuroRate);
     refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
+    importTrendyolRecordsBtn.addEventListener('click', importTrendyolRecords);
+    cancelEditBtn.addEventListener('click', resetForm);
     trendyolStockSearch.addEventListener('keydown', event => {
       if (event.key === 'Enter') fetchTrendyolStock();
     });
