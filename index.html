@@ -206,7 +206,7 @@
 
       <div class="grid">
         <div class="field">
-          <label for="recordName">Kayıt adı</label>
+          <label for="recordName">Ürün / kayıt adı</label>
           <input id="recordName" type="text" placeholder="Örn: Trendyol kulaklık" />
         </div>
 
@@ -291,11 +291,10 @@
 
       <div class="saved-section">
         <div class="saved-header">
-          <h2>Kayıtlar</h2>
-          <button class="btn-danger" id="clearRecordsBtn" type="button">Hepsini sil</button>
+          <h2>Ortak ürün kayıtları</h2>
         </div>
         <div id="recordsArea" class="empty-state">
-          Henüz kayıt yok. Bilgileri girip Kaydet'e basınca hesaplaman burada saklanır.
+          Ortak kayıtlar yükleniyor.
         </div>
       </div>
 
@@ -307,7 +306,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'ecommerceProfitRecords';
+    let recordsCache = [];
     const ids = [
       'salePrice',
       'purchasePrice',
@@ -330,7 +329,6 @@
     const calculateBtn = document.getElementById('calculateBtn');
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
-    const clearRecordsBtn = document.getElementById('clearRecordsBtn');
     const recordsArea = document.getElementById('recordsArea');
 
     function num(v) {
@@ -344,6 +342,14 @@
         currency: 'TRY',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
+      }).format(v || 0);
+    }
+
+    function percent(v) {
+      return new Intl.NumberFormat('tr-TR', {
+        style: 'percent',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
       }).format(v || 0);
     }
 
@@ -408,18 +414,6 @@
       return calculation;
     }
 
-    function getRecords() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-      } catch (error) {
-        return [];
-      }
-    }
-
-    function setRecords(records) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    }
-
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, '&amp;')
@@ -436,15 +430,14 @@
       }).format(new Date(value));
     }
 
-    function renderRecords() {
-      const records = getRecords();
-      clearRecordsBtn.disabled = records.length === 0;
-
+    function renderRecords(records) {
       if (!records.length) {
         recordsArea.className = 'empty-state';
-        recordsArea.innerHTML = "Henüz kayıt yok. Bilgileri girip Kaydet'e basınca hesaplaman burada saklanır.";
+        recordsArea.innerHTML = "Henüz ortak kayıt yok. Bir ürün hesaplayıp Kaydet'e basınca siteye giren herkes burada görür.";
         return;
       }
+
+      const sortedRecords = [...records].sort((a, b) => b.results.profit - a.results.profit);
 
       recordsArea.className = 'records-table-wrap';
       recordsArea.innerHTML = `
@@ -458,11 +451,17 @@
               <th>Kargo</th>
               <th>Komisyon</th>
               <th>Net kâr</th>
+              <th>Kâr oranı</th>
               <th>İşlem</th>
             </tr>
           </thead>
           <tbody>
-            ${records.map(record => `
+            ${sortedRecords.map(record => {
+              const profitRate = record.inputs.salePrice > 0
+                ? record.results.profit / record.inputs.salePrice
+                : 0;
+
+              return `
               <tr>
                 <td>${escapeHtml(record.name)}</td>
                 <td>${formatDate(record.createdAt)}</td>
@@ -471,35 +470,74 @@
                 <td>${tl(record.inputs.shippingFee)}</td>
                 <td>${tl(record.results.commissionFee)}</td>
                 <td class="${record.results.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${tl(record.results.profit)}</td>
+                <td class="${record.results.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${percent(profitRate)}</td>
                 <td>
                   <div class="table-actions">
                     <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
-                    <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
                   </div>
                 </td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       `;
     }
 
-    function saveRecord() {
+    async function fetchRecords() {
+      recordsArea.className = 'empty-state';
+      recordsArea.innerHTML = 'Ortak kayıtlar yükleniyor.';
+
+      try {
+        const response = await fetch('/api/records');
+
+        if (!response.ok) {
+          throw new Error('Kayıtlar alınamadı.');
+        }
+
+        recordsCache = await response.json();
+        renderRecords(recordsCache);
+      } catch (error) {
+        recordsArea.className = 'empty-state';
+        recordsArea.innerHTML = 'Ortak kayıtlar için siteyi sunucu üzerinden açmalısın. Terminalde node server.js çalıştırıp http://localhost:3000 adresinden gir.';
+      }
+    }
+
+    async function saveRecord() {
       const calculation = calculate();
-      const records = getRecords();
-      const name = el.recordName.value.trim() || `Kayıt ${records.length + 1}`;
+      const name = el.recordName.value.trim();
 
-      const record = {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        name,
-        createdAt: new Date().toISOString(),
-        inputs: calculation.inputs,
-        results: calculation.results
-      };
+      if (!name) {
+        alert('Ürün / kayıt adı yazmalısın.');
+        el.recordName.focus();
+        return;
+      }
 
-      setRecords([record, ...records]);
-      el.recordName.value = '';
-      renderRecords();
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Kaydediliyor...';
+
+      try {
+        const response = await fetch('/api/records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            inputs: calculation.inputs
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Kayıt yapılamadı.');
+        }
+
+        el.recordName.value = '';
+        await fetchRecords();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Kaydet';
+      }
     }
 
     function loadRecord(record) {
@@ -511,12 +549,6 @@
 
       calculate();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function deleteRecord(recordId) {
-      const records = getRecords().filter(record => record.id !== recordId);
-      setRecords(records);
-      renderRecords();
     }
 
     function resetForm() {
@@ -540,30 +572,20 @@
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
     resetBtn.addEventListener('click', resetForm);
-    clearRecordsBtn.addEventListener('click', () => {
-      if (!confirm('Tüm kayıtları silmek istediğine emin misin?')) return;
-      setRecords([]);
-      renderRecords();
-    });
 
     recordsArea.addEventListener('click', event => {
       const button = event.target.closest('button[data-action]');
       if (!button) return;
 
-      const records = getRecords();
-      const record = records.find(item => item.id === button.dataset.id);
+      const record = recordsCache.find(item => item.id === button.dataset.id);
 
       if (button.dataset.action === 'load' && record) {
         loadRecord(record);
       }
-
-      if (button.dataset.action === 'delete') {
-        deleteRecord(button.dataset.id);
-      }
     });
 
     calculate();
-    renderRecords();
+    fetchRecords();
   </script>
 </body>
 </html>
