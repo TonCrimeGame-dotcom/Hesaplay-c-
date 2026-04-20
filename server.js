@@ -8,6 +8,9 @@ const ROOT = __dirname;
 const DATA_FILE = process.env.DATA_FILE
   ? path.resolve(process.env.DATA_FILE)
   : path.join(ROOT, 'data', 'records.json');
+const NOTES_FILE = process.env.NOTES_FILE
+  ? path.resolve(process.env.NOTES_FILE)
+  : path.join(ROOT, 'data', 'notes.json');
 const DATA_DIR = path.dirname(DATA_FILE);
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -108,6 +111,22 @@ async function writeRecords(records) {
   await fs.writeFile(DATA_FILE, JSON.stringify(records, null, 2), 'utf8');
 }
 
+async function readNotes() {
+  try {
+    const content = await fs.readFile(NOTES_FILE, 'utf8');
+    const notes = JSON.parse(content);
+    return Array.isArray(notes) ? notes : [];
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
+async function writeNotes(notes) {
+  await fs.mkdir(path.dirname(NOTES_FILE), { recursive: true });
+  await fs.writeFile(NOTES_FILE, JSON.stringify(notes, null, 2), 'utf8');
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -187,6 +206,57 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/notes') {
+    const notes = await readNotes();
+    send(res, 200, notes);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/notes') {
+    const body = await readBody(req);
+    const note = String(body.note || '').trim().slice(0, 500);
+
+    if (!note) {
+      send(res, 400, { error: 'Not metni gerekli.' });
+      return;
+    }
+
+    const newNote = {
+      id: crypto.randomUUID(),
+      note,
+      createdAt: new Date().toISOString()
+    };
+
+    const notes = await readNotes();
+    await writeNotes([newNote, ...notes].slice(0, 100));
+    send(res, 201, newNote);
+    return;
+  }
+
+  if (req.method === 'DELETE' && url.pathname === '/api/notes') {
+    if (!process.env.ADMIN_PASSWORD) {
+      send(res, 503, { error: 'ADMIN_PASSWORD ortam değişkeni eklenmeli.' });
+      return;
+    }
+
+    if ((req.headers['x-admin-password'] || '') !== process.env.ADMIN_PASSWORD) {
+      send(res, 401, { error: 'Yönetici şifresi hatalı.' });
+      return;
+    }
+
+    const id = String(url.searchParams.get('id') || '').trim();
+
+    if (!id) {
+      send(res, 400, { error: 'Geçersiz not id.' });
+      return;
+    }
+
+    const notes = await readNotes();
+    await writeNotes(notes.filter(note => note.id !== id));
+    send(res, 200, { ok: true });
+    return;
+  }
+
   send(res, 404, { error: 'API yolu bulunamadı.' });
 }
 
@@ -216,6 +286,11 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === '/favicon.ico') {
       sendNoContent(res);
+      return;
+    }
+
+    if (url.pathname === '/assets/logo.png' || url.pathname === '/assets/logo-cropped.png') {
+      await sendFile(res, path.join(ROOT, url.pathname), 'image/png');
       return;
     }
 
