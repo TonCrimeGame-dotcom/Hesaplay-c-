@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:," />
-  <title>TOPTAN A.Ş. ÜRÜN KAR HESAPLAMA</title>
+  <title>E-Ticaret Kâr Hesaplayıcı</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -32,6 +34,16 @@
       margin: 0 0 24px;
       color: #6b7280;
       line-height: 1.5;
+    }
+    .signature-name {
+      display: inline-block;
+      margin-left: 10px;
+      font-family: 'Dancing Script', 'Segoe Script', 'Brush Script MT', cursive;
+      font-size: 30px;
+      font-weight: 700;
+      color: #0f766e;
+      vertical-align: middle;
+      white-space: nowrap;
     }
     .grid {
       display: grid;
@@ -137,6 +149,16 @@
       margin: 0;
       font-size: 22px;
     }
+    .admin-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-note {
+      font-size: 13px;
+      color: #6b7280;
+    }
     .records-table-wrap {
       overflow-x: auto;
       border: 1px solid #e5e7eb;
@@ -199,10 +221,11 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>TOPTAN A.Ş. Ürün Kar Hesaplama</h1>
-     <p class="desc">
-  YİĞİT BEY UMARIM BEĞENİRSİNİZ VE İSTEDİĞİNİZ ÖZELLİĞİ EKLEYEBİLİRİZ.
-</p>
+      <h1>E-Ticaret Kâr Hesaplayıcı</h1>
+      <p class="desc">
+        YİĞİT BEY UMARIM BEĞENİRSİNİZ VE İSTEDİĞİNİZ ÖZELLİĞİ EKLEYEBİLİRİZ.
+        <span class="signature-name">Yağız</span>
+      </p>
 
       <div class="grid">
         <div class="field">
@@ -292,6 +315,10 @@
       <div class="saved-section">
         <div class="saved-header">
           <h2>Ortak ürün kayıtları</h2>
+          <div class="admin-controls">
+            <span class="admin-note" id="adminNote">Silme kapalı</span>
+            <button class="btn-secondary" id="adminModeBtn" type="button">Yönetici modu</button>
+          </div>
         </div>
         <div id="recordsArea" class="empty-state">
           Ortak kayıtlar yükleniyor.
@@ -307,6 +334,7 @@
 
   <script>
     let recordsCache = [];
+    let adminPassword = sessionStorage.getItem('recordsAdminPassword') || '';
     const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     const usesSeparateLocalServer = window.location.protocol === 'file:'
       || (isLocalHost && window.location.port && window.location.port !== '3000');
@@ -333,10 +361,21 @@
     const calculateBtn = document.getElementById('calculateBtn');
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const adminModeBtn = document.getElementById('adminModeBtn');
+    const adminNote = document.getElementById('adminNote');
     const recordsArea = document.getElementById('recordsArea');
 
     function apiUrl(path) {
       return `${API_BASE}${path}`;
+    }
+
+    function isAdminMode() {
+      return Boolean(adminPassword);
+    }
+
+    function updateAdminUi() {
+      adminNote.textContent = isAdminMode() ? 'Silme açık' : 'Silme kapalı';
+      adminModeBtn.textContent = isAdminMode() ? 'Yönetici çıkışı' : 'Yönetici modu';
     }
 
     function num(v) {
@@ -482,6 +521,7 @@
                 <td>
                   <div class="table-actions">
                     <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
+                    ${isAdminMode() ? `<button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>` : ''}
                   </div>
                 </td>
               </tr>
@@ -549,6 +589,29 @@
       }
     }
 
+    async function deleteRecord(recordId) {
+      const record = recordsCache.find(item => item.id === recordId);
+      const recordName = record ? `"${record.name}"` : 'bu kayıt';
+
+      if (!confirm(`${recordName} silinsin mi?`)) return;
+
+      try {
+        const response = await fetch(apiUrl(`/api/records?id=${encodeURIComponent(recordId)}`), {
+          method: 'DELETE',
+          headers: { 'X-Admin-Password': adminPassword }
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Kayıt silinemedi.');
+        }
+
+        await fetchRecords();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
     function loadRecord(record) {
       el.recordName.value = record.name || '';
 
@@ -581,6 +644,24 @@
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
     resetBtn.addEventListener('click', resetForm);
+    adminModeBtn.addEventListener('click', () => {
+      if (isAdminMode()) {
+        adminPassword = '';
+        sessionStorage.removeItem('recordsAdminPassword');
+        updateAdminUi();
+        renderRecords(recordsCache);
+        return;
+      }
+
+      const password = prompt('Yönetici şifresini yaz:');
+
+      if (!password) return;
+
+      adminPassword = password;
+      sessionStorage.setItem('recordsAdminPassword', password);
+      updateAdminUi();
+      renderRecords(recordsCache);
+    });
 
     recordsArea.addEventListener('click', event => {
       const button = event.target.closest('button[data-action]');
@@ -591,8 +672,13 @@
       if (button.dataset.action === 'load' && record) {
         loadRecord(record);
       }
+
+      if (button.dataset.action === 'delete') {
+        deleteRecord(button.dataset.id);
+      }
     });
 
+    updateAdminUi();
     calculate();
     fetchRecords();
   </script>
