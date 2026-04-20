@@ -333,6 +333,20 @@
       font-size: 13px;
       line-height: 1.4;
     }
+    .stock-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .stock-tab {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .stock-tab.active {
+      background: #111827;
+      color: #fff;
+    }
     .stock-amount {
       font-weight: 800;
     }
@@ -393,7 +407,7 @@
       padding: 14px;
       border-radius: 12px;
     }
-    @media (max-width: 720px) {
+    @media (max-width: 560px) {
       .grid, .results { grid-template-columns: 1fr; }
       .site-topbar {
         align-items: center;
@@ -449,7 +463,7 @@
       .wrap { margin: 0; padding: 10px; }
       .card { border-radius: 0; min-height: 100vh; }
     }
-    @media (min-width: 721px) and (max-width: 980px) {
+    @media (min-width: 561px) and (max-width: 980px) {
       .site-topbar {
         grid-template-columns: 190px 1fr;
       }
@@ -546,21 +560,6 @@
           <input id="vatRate" type="number" min="0" step="0.01" value="1" />
         </div>
 
-        <div class="field">
-          <label for="saleMode">Satış fiyatı tipi</label>
-          <select id="saleMode">
-            <option value="includingVat" selected>KDV dahil satış fiyatı</option>
-            <option value="excludingVat">KDV hariç satış fiyatı</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="commissionBase">Komisyon hesaplama tabanı</label>
-          <select id="commissionBase">
-            <option value="salePrice" selected>Satış fiyatı üzerinden</option>
-            <option value="saleNet">KDV hariç satış fiyatı üzerinden</option>
-          </select>
-        </div>
       </div>
 
       <div class="results">
@@ -597,6 +596,19 @@
 
       <div class="saved-section">
         <div class="saved-header">
+          <h2>Ortak ürün kayıtları</h2>
+          <div class="admin-controls">
+            <span class="admin-note" id="adminNote">Silme kapalı</span>
+            <button class="btn-secondary" id="adminModeBtn" type="button">Yönetici modu</button>
+          </div>
+        </div>
+        <div id="recordsArea" class="empty-state">
+          Ortak kayıtlar yükleniyor.
+        </div>
+      </div>
+
+      <div class="saved-section">
+        <div class="saved-header">
           <h2>Trendyol stok bilgisi</h2>
         </div>
         <div class="stock-controls">
@@ -606,21 +618,12 @@
         <div class="stock-status" id="trendyolStockStatus">
           Sadece okuma modu. Bu alandan stok değiştirilemez.
         </div>
+        <div class="stock-tabs" aria-label="Stok filtreleri">
+          <button class="stock-tab active" type="button" data-stock-tab="available">Stokta olanlar</button>
+          <button class="stock-tab" type="button" data-stock-tab="zero">Stok 0 ürünler</button>
+        </div>
         <div id="trendyolStockArea" class="empty-state">
           Stok bilgisi yükleniyor.
-        </div>
-      </div>
-
-      <div class="saved-section">
-        <div class="saved-header">
-          <h2>Ortak ürün kayıtları</h2>
-          <div class="admin-controls">
-            <span class="admin-note" id="adminNote">Silme kapalı</span>
-            <button class="btn-secondary" id="adminModeBtn" type="button">Yönetici modu</button>
-          </div>
-        </div>
-        <div id="recordsArea" class="empty-state">
-          Ortak kayıtlar yükleniyor.
         </div>
       </div>
 
@@ -652,6 +655,8 @@
   <script>
     let recordsCache = [];
     let notesCache = [];
+    let trendyolStockCache = null;
+    let activeStockTab = 'available';
     let eurTryRate = 0;
     let currencySource = 'eur';
     const RATE_CACHE_KEY = 'eurTryRateCache';
@@ -665,9 +670,7 @@
       'shippingFee',
       'commissionRate',
       'withholdingRate',
-      'vatRate',
-      'saleMode',
-      'commissionBase'
+      'vatRate'
     ];
 
     const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
@@ -694,6 +697,7 @@
     const refreshTrendyolStockBtn = document.getElementById('refreshTrendyolStockBtn');
     const trendyolStockStatus = document.getElementById('trendyolStockStatus');
     const trendyolStockArea = document.getElementById('trendyolStockArea');
+    const stockTabButtons = Array.from(document.querySelectorAll('[data-stock-tab]'));
     const noteText = document.getElementById('noteText');
     const saveNoteBtn = document.getElementById('saveNoteBtn');
     const notesArea = document.getElementById('notesArea');
@@ -837,14 +841,11 @@
       const commissionRate = num(el.commissionRate.value);
       const withholdingRate = num(el.withholdingRate.value);
       const vatRate = num(el.vatRate.value);
-      const saleMode = el.saleMode.value;
-      const commissionBase = el.commissionBase.value;
+      const saleMode = 'includingVat';
+      const commissionBase = 'salePrice';
 
-      const saleNet = saleMode === 'includingVat'
-        ? salePrice / (1 + vatRate / 100)
-        : salePrice;
-
-      const commissionCalculationBase = commissionBase === 'saleNet' ? saleNet : salePrice;
+      const saleNet = salePrice / (1 + vatRate / 100);
+      const commissionCalculationBase = salePrice;
       const commissionFee = commissionCalculationBase * (commissionRate / 100);
       const withholdingFee = saleNet * (withholdingRate / 100);
       const profit = salePrice - purchasePrice - shippingFee - commissionFee - withholdingFee;
@@ -913,14 +914,27 @@
       return Number.isNaN(date.getTime()) ? '-' : formatDate(date);
     }
 
-    function renderTrendyolStock(data) {
-      const items = data.items || [];
+    function updateStockTabs() {
+      stockTabButtons.forEach(button => {
+        button.classList.toggle('active', button.dataset.stockTab === activeStockTab);
+      });
+    }
 
-      trendyolStockStatus.textContent = `Sadece okuma modu. ${items.length} ürün gösteriliyor. Son kontrol: ${formatDate(data.fetchedAt)}.`;
+    function renderTrendyolStock(data) {
+      const allItems = data.items || [];
+      const availableItems = allItems.filter(item => item.quantity > 0);
+      const zeroItems = allItems.filter(item => item.quantity <= 0);
+      const items = activeStockTab === 'zero' ? zeroItems : availableItems;
+      const tabLabel = activeStockTab === 'zero' ? 'stok 0 ürün' : 'stokta olan ürün';
+
+      updateStockTabs();
+      trendyolStockStatus.textContent = `Sadece okuma modu. ${items.length} ${tabLabel} gösteriliyor. Stokta: ${availableItems.length}, stok 0: ${zeroItems.length}. Son kontrol: ${formatDate(data.fetchedAt)}.`;
 
       if (!items.length) {
         trendyolStockArea.className = 'empty-state';
-        trendyolStockArea.innerHTML = 'Stok bilgisi bulunamadı.';
+        trendyolStockArea.innerHTML = activeStockTab === 'zero'
+          ? 'Stok 0 ürün bulunamadı.'
+          : 'Stokta olan ürün bulunamadı.';
         return;
       }
 
@@ -965,6 +979,8 @@
 
       if (barcode) query.set('barcode', barcode);
 
+      activeStockTab = 'available';
+      updateStockTabs();
       refreshTrendyolStockBtn.disabled = true;
       refreshTrendyolStockBtn.textContent = 'Yükleniyor...';
       trendyolStockStatus.textContent = 'Trendyol stok bilgisi alınıyor.';
@@ -979,7 +995,8 @@
           throw new Error(error.error || 'Trendyol stok bilgisi alınamadı.');
         }
 
-        renderTrendyolStock(await response.json());
+        trendyolStockCache = await response.json();
+        renderTrendyolStock(trendyolStockCache);
       } catch (error) {
         trendyolStockStatus.textContent = 'Sadece okuma modu.';
         trendyolStockArea.className = 'empty-state';
@@ -1235,8 +1252,6 @@
       el.commissionRate.value = '19';
       el.withholdingRate.value = '1';
       el.vatRate.value = '1';
-      el.saleMode.value = 'includingVat';
-      el.commissionBase.value = 'salePrice';
       calculate();
     }
 
@@ -1251,6 +1266,16 @@
     refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
     trendyolStockSearch.addEventListener('keydown', event => {
       if (event.key === 'Enter') fetchTrendyolStock();
+    });
+    stockTabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        activeStockTab = button.dataset.stockTab;
+        if (trendyolStockCache) {
+          renderTrendyolStock(trendyolStockCache);
+        } else {
+          updateStockTabs();
+        }
+      });
     });
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
