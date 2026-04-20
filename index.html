@@ -27,16 +27,28 @@
       padding: 24px;
     }
     .site-topbar {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 220px minmax(280px, 360px) 1fr;
       align-items: center;
       gap: 16px;
       margin-bottom: 18px;
+    }
+    .brand-area {
+      display: flex;
+      align-items: center;
     }
     .brand-logo {
       display: block;
       width: min(190px, 48vw);
       height: auto;
+    }
+    .topbar-center {
+      justify-self: center;
+      width: 100%;
+    }
+    .topbar-right {
+      justify-self: end;
+      min-width: 210px;
     }
     .date-time-box {
       text-align: right;
@@ -46,33 +58,32 @@
     }
     .clock-list {
       display: grid;
-      gap: 6px;
+      gap: 5px;
     }
     .clock-item {
-      display: grid;
-      gap: 1px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: baseline;
+      gap: 8px;
     }
     .date-time-label {
-      display: block;
       font-size: 12px;
       font-weight: 700;
       color: #6b7280;
       text-transform: uppercase;
     }
     .date-time-value {
-      display: block;
       font-size: 18px;
       font-weight: 800;
     }
-    .topbar-tools {
-      display: grid;
-      gap: 10px;
-      justify-items: end;
-      min-width: 270px;
+    .date-line {
+      margin-bottom: 6px;
+      color: #374151;
+      font-size: 18px;
+      font-weight: 800;
     }
     .euro-tool {
       width: 100%;
-      max-width: 310px;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
       padding: 10px;
@@ -364,17 +375,20 @@
     @media (max-width: 720px) {
       .grid, .results { grid-template-columns: 1fr; }
       .site-topbar {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: stretch;
+        grid-template-columns: 1fr;
+      }
+      .topbar-center,
+      .topbar-right {
+        justify-self: stretch;
+        min-width: 0;
       }
       .date-time-box {
         text-align: left;
         white-space: normal;
       }
-      .topbar-tools {
-        justify-items: stretch;
-        min-width: 0;
-        width: 100%;
+      .clock-item {
+        justify-content: flex-start;
       }
       .euro-tool {
         max-width: none;
@@ -391,26 +405,25 @@
       .wrap { margin: 0; padding: 10px; }
       .card { border-radius: 0; min-height: 100vh; }
     }
+    @media (min-width: 721px) and (max-width: 980px) {
+      .site-topbar {
+        grid-template-columns: 190px 1fr;
+      }
+      .topbar-right {
+        grid-column: 1 / -1;
+        justify-self: end;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <div class="site-topbar">
-        <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
-        <div class="topbar-tools">
-          <div class="date-time-box" aria-live="polite">
-            <div class="clock-list">
-              <div class="clock-item">
-                <span class="date-time-label">İstanbul</span>
-                <span class="date-time-value" id="istanbulTimeValue">Yükleniyor</span>
-              </div>
-              <div class="clock-item">
-                <span class="date-time-label">Almanya / Düsseldorf</span>
-                <span class="date-time-value" id="dusseldorfTimeValue">Yükleniyor</span>
-              </div>
-            </div>
-          </div>
+        <div class="brand-area">
+          <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
+        </div>
+        <div class="topbar-center">
           <div class="euro-tool" aria-label="Euro TL hesaplayıcı">
             <div class="euro-title">Euro / TL</div>
             <div class="euro-grid">
@@ -427,6 +440,21 @@
             <div class="euro-meta">
               <span class="euro-status" id="eurRateStatus">Kur otomatik alınıyor.</span>
               <button class="btn-secondary btn-mini" id="refreshRateBtn" type="button">Kuru yenile</button>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="date-time-box" aria-live="polite">
+            <div class="date-line" id="currentDateValue">Yükleniyor</div>
+            <div class="clock-list">
+              <div class="clock-item">
+                <span class="date-time-value" id="istanbulTimeValue">--:--:--</span>
+                <span class="date-time-label">TR</span>
+              </div>
+              <div class="clock-item">
+                <span class="date-time-value" id="dusseldorfTimeValue">--:--:--</span>
+                <span class="date-time-label">DE</span>
+              </div>
             </div>
           </div>
         </div>
@@ -594,6 +622,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
     const recordsArea = document.getElementById('recordsArea');
+    const currentDateValue = document.getElementById('currentDateValue');
     const istanbulTimeValue = document.getElementById('istanbulTimeValue');
     const dusseldorfTimeValue = document.getElementById('dusseldorfTimeValue');
     const eurAmount = document.getElementById('eurAmount');
@@ -610,15 +639,24 @@
     }
 
     function updateClock() {
+      currentDateValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Europe/Istanbul'
+      }).format(new Date()).replace('.', '');
+
       istanbulTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
-        dateStyle: 'medium',
-        timeStyle: 'medium',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
         timeZone: 'Europe/Istanbul'
       }).format(new Date());
 
       dusseldorfTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
-        dateStyle: 'medium',
-        timeStyle: 'medium',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
         timeZone: 'Europe/Berlin'
       }).format(new Date());
     }
