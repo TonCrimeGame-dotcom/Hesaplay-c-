@@ -44,6 +44,14 @@
       line-height: 1.35;
       white-space: nowrap;
     }
+    .clock-list {
+      display: grid;
+      gap: 6px;
+    }
+    .clock-item {
+      display: grid;
+      gap: 1px;
+    }
     .date-time-label {
       display: block;
       font-size: 12px;
@@ -93,7 +101,7 @@
       padding: 9px 10px;
       font-size: 14px;
     }
-    .euro-result {
+    .rate-summary {
       margin-top: 8px;
       padding: 9px 10px;
       border-radius: 8px;
@@ -372,7 +380,7 @@
         max-width: none;
       }
       .euro-title,
-      .euro-result {
+      .rate-summary {
         text-align: left;
       }
       .euro-meta {
@@ -392,22 +400,30 @@
         <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
         <div class="topbar-tools">
           <div class="date-time-box" aria-live="polite">
-            <span class="date-time-label">Almanya / Düsseldorf</span>
-            <span class="date-time-value" id="dateTimeValue">Yükleniyor</span>
+            <div class="clock-list">
+              <div class="clock-item">
+                <span class="date-time-label">İstanbul</span>
+                <span class="date-time-value" id="istanbulTimeValue">Yükleniyor</span>
+              </div>
+              <div class="clock-item">
+                <span class="date-time-label">Almanya / Düsseldorf</span>
+                <span class="date-time-value" id="dusseldorfTimeValue">Yükleniyor</span>
+              </div>
+            </div>
           </div>
           <div class="euro-tool" aria-label="Euro TL hesaplayıcı">
             <div class="euro-title">Euro / TL</div>
             <div class="euro-grid">
               <div class="euro-field">
                 <label for="eurAmount">Euro</label>
-                <input id="eurAmount" type="number" min="0" step="0.01" value="1" />
+                <input id="eurAmount" type="number" min="0" step="0.01" placeholder="Euro yaz" />
               </div>
               <div class="euro-field">
-                <label for="eurRate">Kur</label>
-                <input id="eurRate" type="number" min="0" step="0.0001" placeholder="Yükleniyor" />
+                <label for="tryAmount">TL</label>
+                <input id="tryAmount" type="number" min="0" step="0.01" placeholder="TL yaz" />
               </div>
             </div>
-            <div class="euro-result" id="eurTryResult">Kur gir</div>
+            <div class="rate-summary" id="eurTryResult">Kur otomatik alınıyor.</div>
             <div class="euro-meta">
               <span class="euro-status" id="eurRateStatus">Kur otomatik alınıyor.</span>
               <button class="btn-secondary btn-mini" id="refreshRateBtn" type="button">Kuru yenile</button>
@@ -445,7 +461,7 @@
 
         <div class="field">
           <label for="commissionRate">Komisyon oranı (%)</label>
-          <input id="commissionRate" type="number" min="0" step="0.01" value="21.5" />
+          <input id="commissionRate" type="number" min="0" step="0.01" value="19" />
         </div>
 
         <div class="field">
@@ -455,7 +471,7 @@
 
         <div class="field">
           <label for="vatRate">KDV oranı (%)</label>
-          <input id="vatRate" type="number" min="0" step="0.01" value="20" />
+          <input id="vatRate" type="number" min="0" step="0.01" value="1" />
         </div>
 
         <div class="field">
@@ -548,6 +564,9 @@
   <script>
     let recordsCache = [];
     let notesCache = [];
+    let eurTryRate = 0;
+    let currencySource = 'eur';
+    const RATE_CACHE_KEY = 'eurTryRateCache';
     const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     const usesSeparateLocalServer = window.location.protocol === 'file:'
       || (isLocalHost && window.location.port && window.location.port !== '3000');
@@ -575,9 +594,10 @@
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
     const recordsArea = document.getElementById('recordsArea');
-    const dateTimeValue = document.getElementById('dateTimeValue');
+    const istanbulTimeValue = document.getElementById('istanbulTimeValue');
+    const dusseldorfTimeValue = document.getElementById('dusseldorfTimeValue');
     const eurAmount = document.getElementById('eurAmount');
-    const eurRate = document.getElementById('eurRate');
+    const tryAmount = document.getElementById('tryAmount');
     const eurTryResult = document.getElementById('eurTryResult');
     const eurRateStatus = document.getElementById('eurRateStatus');
     const refreshRateBtn = document.getElementById('refreshRateBtn');
@@ -590,7 +610,13 @@
     }
 
     function updateClock() {
-      dateTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+      istanbulTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+        timeZone: 'Europe/Istanbul'
+      }).format(new Date());
+
+      dusseldorfTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
         dateStyle: 'medium',
         timeStyle: 'medium',
         timeZone: 'Europe/Berlin'
@@ -611,16 +637,42 @@
       }).format(v || 0);
     }
 
-    function calculateEuroTry() {
-      const amount = num(eurAmount.value);
-      const rate = num(eurRate.value);
+    function plainMoney(v) {
+      if (!Number.isFinite(v)) return '';
+      return String(Math.round(v * 100) / 100);
+    }
 
-      if (!rate) {
-        eurTryResult.textContent = 'Kur gir';
+    function setEuroRate(rate, date, sourceText) {
+      eurTryRate = Number(rate) || 0;
+
+      if (!eurTryRate) {
+        eurTryResult.textContent = 'Kur bekleniyor.';
         return;
       }
 
-      eurTryResult.textContent = tl(amount * rate);
+      eurTryResult.textContent = `1 EUR = ${tl(eurTryRate)}`;
+      eurRateStatus.textContent = date
+        ? `${sourceText}: ${date}`
+        : sourceText;
+      calculateEuroTry(currencySource);
+    }
+
+    function calculateEuroTry(source = currencySource) {
+      currencySource = source;
+
+      if (!eurTryRate) {
+        eurTryResult.textContent = 'Kur bekleniyor.';
+        return;
+      }
+
+      if (source === 'eur') {
+        const amount = num(eurAmount.value);
+        tryAmount.value = eurAmount.value === '' ? '' : plainMoney(amount * eurTryRate);
+        return;
+      }
+
+      const amount = num(tryAmount.value);
+      eurAmount.value = tryAmount.value === '' ? '' : plainMoney(amount / eurTryRate);
     }
 
     async function fetchEuroRate() {
@@ -640,13 +692,31 @@
           throw new Error('Kur yanıtı beklenen formatta değil.');
         }
 
-        eurRate.value = Number(data.rate).toFixed(4);
-        eurRateStatus.textContent = `Güncel kur: ${data.date}`;
-        calculateEuroTry();
+        localStorage.setItem(RATE_CACHE_KEY, JSON.stringify({
+          rate: Number(data.rate),
+          date: data.date,
+          storedAt: new Date().toISOString()
+        }));
+        setEuroRate(data.rate, data.date, 'Güncel kur');
       } catch (error) {
-        eurRateStatus.textContent = 'Kur otomatik alınamadı, elle girebilirsin.';
+        if (!eurTryRate) {
+          eurRateStatus.textContent = 'Kur otomatik alınamadı.';
+          eurTryResult.textContent = 'Kur alınamadı.';
+        } else {
+          eurRateStatus.textContent = 'Kur yenilenemedi, son alınan kur kullanılıyor.';
+        }
       } finally {
         refreshRateBtn.disabled = false;
+      }
+    }
+
+    function loadCachedEuroRate() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(RATE_CACHE_KEY) || '{}');
+        if (!cached.rate) return;
+        setEuroRate(cached.rate, cached.date, 'Son alınan kur');
+      } catch (error) {
+        localStorage.removeItem(RATE_CACHE_KEY);
       }
     }
 
@@ -977,9 +1047,9 @@
       el.salePrice.value = '1000';
       el.purchasePrice.value = '500';
       el.shippingFee.value = '80';
-      el.commissionRate.value = '21.5';
+      el.commissionRate.value = '19';
       el.withholdingRate.value = '1';
-      el.vatRate.value = '20';
+      el.vatRate.value = '1';
       el.saleMode.value = 'includingVat';
       el.commissionBase.value = 'salePrice';
       calculate();
@@ -990,8 +1060,8 @@
       el[id].addEventListener('change', calculate);
     });
 
-    eurAmount.addEventListener('input', calculateEuroTry);
-    eurRate.addEventListener('input', calculateEuroTry);
+    eurAmount.addEventListener('input', () => calculateEuroTry('eur'));
+    tryAmount.addEventListener('input', () => calculateEuroTry('try'));
     refreshRateBtn.addEventListener('click', fetchEuroRate);
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
@@ -1024,8 +1094,9 @@
 
     updateClock();
     setInterval(updateClock, 1000);
+    loadCachedEuroRate();
     fetchEuroRate();
-    calculateEuroTry();
+    setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
     calculate();
     fetchRecords();
     fetchNotes();
