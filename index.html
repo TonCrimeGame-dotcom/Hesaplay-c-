@@ -321,6 +321,27 @@
       line-height: 1.5;
       background: #fafafa;
     }
+    .stock-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stock-status {
+      margin-bottom: 12px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .stock-amount {
+      font-weight: 800;
+    }
+    .stock-low {
+      color: #dc2626;
+    }
+    .stock-ok {
+      color: #059669;
+    }
     .notes-section {
       margin-top: 24px;
       border-top: 1px solid #e5e7eb;
@@ -420,6 +441,9 @@
       .euro-meta {
         align-items: flex-start;
         flex-direction: column;
+      }
+      .stock-controls {
+        grid-template-columns: 1fr;
       }
       .result-value { font-size: 24px; }
       .wrap { margin: 0; padding: 10px; }
@@ -573,6 +597,22 @@
 
       <div class="saved-section">
         <div class="saved-header">
+          <h2>Trendyol stok bilgisi</h2>
+        </div>
+        <div class="stock-controls">
+          <input id="trendyolStockSearch" type="text" placeholder="Barkod ile ara veya boş bırak" />
+          <button class="btn-secondary" id="refreshTrendyolStockBtn" type="button">Stokları yenile</button>
+        </div>
+        <div class="stock-status" id="trendyolStockStatus">
+          Sadece okuma modu. Bu alandan stok değiştirilemez.
+        </div>
+        <div id="trendyolStockArea" class="empty-state">
+          Stok bilgisi yükleniyor.
+        </div>
+      </div>
+
+      <div class="saved-section">
+        <div class="saved-header">
           <h2>Ortak ürün kayıtları</h2>
           <div class="admin-controls">
             <span class="admin-note" id="adminNote">Silme kapalı</span>
@@ -650,6 +690,10 @@
     const eurTryResult = document.getElementById('eurTryResult');
     const eurRateStatus = document.getElementById('eurRateStatus');
     const refreshRateBtn = document.getElementById('refreshRateBtn');
+    const trendyolStockSearch = document.getElementById('trendyolStockSearch');
+    const refreshTrendyolStockBtn = document.getElementById('refreshTrendyolStockBtn');
+    const trendyolStockStatus = document.getElementById('trendyolStockStatus');
+    const trendyolStockArea = document.getElementById('trendyolStockArea');
     const noteText = document.getElementById('noteText');
     const saveNoteBtn = document.getElementById('saveNoteBtn');
     const notesArea = document.getElementById('notesArea');
@@ -861,6 +905,89 @@
         dateStyle: 'short',
         timeStyle: 'short'
       }).format(new Date(value));
+    }
+
+    function formatTrendyolDate(value) {
+      if (!value) return '-';
+      const date = typeof value === 'number' ? new Date(value) : new Date(value);
+      return Number.isNaN(date.getTime()) ? '-' : formatDate(date);
+    }
+
+    function renderTrendyolStock(data) {
+      const items = data.items || [];
+
+      trendyolStockStatus.textContent = `Sadece okuma modu. ${items.length} ürün gösteriliyor. Son kontrol: ${formatDate(data.fetchedAt)}.`;
+
+      if (!items.length) {
+        trendyolStockArea.className = 'empty-state';
+        trendyolStockArea.innerHTML = 'Stok bilgisi bulunamadı.';
+        return;
+      }
+
+      trendyolStockArea.className = 'records-table-wrap';
+      trendyolStockArea.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Ürün</th>
+              <th>Barkod</th>
+              <th>Stok kodu</th>
+              <th>Stok</th>
+              <th>Satış fiyatı</th>
+              <th>Liste fiyatı</th>
+              <th>Marka</th>
+              <th>Kategori</th>
+              <th>Son güncelleme</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td>${escapeHtml(item.title || '-')}</td>
+                <td>${escapeHtml(item.barcode || '-')}</td>
+                <td>${escapeHtml(item.stockCode || '-')}</td>
+                <td class="stock-amount ${item.quantity <= 0 ? 'stock-low' : 'stock-ok'}">${item.quantity}</td>
+                <td>${tl(item.salePrice)}</td>
+                <td>${tl(item.listPrice)}</td>
+                <td>${escapeHtml(item.brand || '-')}</td>
+                <td>${escapeHtml(item.categoryName || '-')}</td>
+                <td>${formatTrendyolDate(item.lastUpdateDate)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function fetchTrendyolStock() {
+      const barcode = trendyolStockSearch.value.trim();
+      const query = new URLSearchParams({ size: '50' });
+
+      if (barcode) query.set('barcode', barcode);
+
+      refreshTrendyolStockBtn.disabled = true;
+      refreshTrendyolStockBtn.textContent = 'Yükleniyor...';
+      trendyolStockStatus.textContent = 'Trendyol stok bilgisi alınıyor.';
+      trendyolStockArea.className = 'empty-state';
+      trendyolStockArea.innerHTML = 'Stok bilgisi yükleniyor.';
+
+      try {
+        const response = await fetch(apiUrl(`/api/trendyol-stock?${query.toString()}`));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Trendyol stok bilgisi alınamadı.');
+        }
+
+        renderTrendyolStock(await response.json());
+      } catch (error) {
+        trendyolStockStatus.textContent = 'Sadece okuma modu.';
+        trendyolStockArea.className = 'empty-state';
+        trendyolStockArea.innerHTML = escapeHtml(error.message);
+      } finally {
+        refreshTrendyolStockBtn.disabled = false;
+        refreshTrendyolStockBtn.textContent = 'Stokları yenile';
+      }
     }
 
     function renderRecords(records) {
@@ -1121,6 +1248,10 @@
     eurAmount.addEventListener('input', () => calculateEuroTry('eur'));
     tryAmount.addEventListener('input', () => calculateEuroTry('try'));
     refreshRateBtn.addEventListener('click', fetchEuroRate);
+    refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
+    trendyolStockSearch.addEventListener('keydown', event => {
+      if (event.key === 'Enter') fetchTrendyolStock();
+    });
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
     saveNoteBtn.addEventListener('click', saveNote);
@@ -1156,6 +1287,7 @@
     fetchEuroRate();
     setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
     calculate();
+    fetchTrendyolStock();
     fetchRecords();
     fetchNotes();
   </script>
