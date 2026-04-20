@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Ticaret Kâr Hesaplayıcı</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    p.desc {
+      margin: 0 0 24px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 16px;
+      outline: none;
+      background: #fff;
+    }
+    input:focus, select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .results {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .result-box {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .result-title {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .result-value {
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .profit-positive { color: #059669; }
+    .profit-negative { color: #dc2626; }
+    .footer-note {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .formula {
+      margin-top: 18px;
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.6;
+      background: #fafafa;
+      border: 1px dashed #d1d5db;
+      padding: 14px;
+      border-radius: 12px;
+    }
+    @media (max-width: 720px) {
+      .grid, .results { grid-template-columns: 1fr; }
+      .result-value { font-size: 24px; }
+      .wrap { margin: 0; padding: 10px; }
+      .card { border-radius: 0; min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>E-Ticaret Kâr Hesaplayıcı</h1>
+      <p class="desc">
+        Kargo, komisyon, e-stopaj, alış ve satış fiyatına göre net kârını otomatik hesaplar.
+        İstersen varsayılan oranları değiştirerek kendi pazaryerine göre kullanabilirsin.
+      </p>
+
+      <div class="grid">
+        <div class="field">
+          <label for="salePrice">Satış fiyatı (TL)</label>
+          <input id="salePrice" type="number" min="0" step="0.01" value="1000" />
+        </div>
+
+        <div class="field">
+          <label for="purchasePrice">Ürün alış fiyatı (TL)</label>
+          <input id="purchasePrice" type="number" min="0" step="0.01" value="500" />
+        </div>
+
+        <div class="field">
+          <label for="shippingFee">Kargo ücreti (TL)</label>
+          <input id="shippingFee" type="number" min="0" step="0.01" value="80" />
+        </div>
+
+        <div class="field">
+          <label for="commissionRate">Komisyon oranı (%)</label>
+          <input id="commissionRate" type="number" min="0" step="0.01" value="21.5" />
+        </div>
+
+        <div class="field">
+          <label for="withholdingRate">E-stopaj oranı (%)</label>
+          <input id="withholdingRate" type="number" min="0" step="0.01" value="1" />
+        </div>
+
+        <div class="field">
+          <label for="vatRate">KDV oranı (%)</label>
+          <input id="vatRate" type="number" min="0" step="0.01" value="20" />
+        </div>
+
+        <div class="field">
+          <label for="saleMode">Satış fiyatı tipi</label>
+          <select id="saleMode">
+            <option value="includingVat" selected>KDV dahil satış fiyatı</option>
+            <option value="excludingVat">KDV hariç satış fiyatı</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="commissionBase">Komisyon hesaplama tabanı</label>
+          <select id="commissionBase">
+            <option value="salePrice" selected>Satış fiyatı üzerinden</option>
+            <option value="saleNet">KDV hariç satış fiyatı üzerinden</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="results">
+        <div class="result-box">
+          <div class="result-title">KDV hariç satış tutarı</div>
+          <div class="result-value" id="netSaleResult">₺0,00</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">Komisyon bedeli</div>
+          <div class="result-value" id="commissionResult">₺0,00</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">E-stopaj bedeli</div>
+          <div class="result-value" id="withholdingResult">₺0,00</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">Net kâr</div>
+          <div class="result-value" id="profitResult">₺0,00</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="calculateBtn">Hesapla</button>
+        <button class="btn-secondary" id="resetBtn">Sıfırla</button>
+      </div>
+
+      <div class="formula" id="formulaText">
+        Formül: Kâr = Satış fiyatı - Alış fiyatı - Kargo - Komisyon bedeli - E-stopaj bedeli
+      </div>
+
+      <div class="footer-note">
+        Not: Bu sürüm pratik kullanım için hazırlanmıştır. E-stopaj alanı varsayılan olarak %1 gelir.
+        İstersen sonraki adımda buna reklam gideri, paketleme, KDV, iade zararı ve farklı pazaryeri komisyonlarını da ekleyebilirim.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ids = [
+      'salePrice',
+      'purchasePrice',
+      'shippingFee',
+      'commissionRate',
+      'withholdingRate',
+      'vatRate',
+      'saleMode',
+      'commissionBase'
+    ];
+
+    const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+
+    const netSaleResult = document.getElementById('netSaleResult');
+    const commissionResult = document.getElementById('commissionResult');
+    const withholdingResult = document.getElementById('withholdingResult');
+    const profitResult = document.getElementById('profitResult');
+    const formulaText = document.getElementById('formulaText');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function num(v) {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function tl(v) {
+      return new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: 'TRY',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(v || 0);
+    }
+
+    function calculate() {
+      const salePrice = num(el.salePrice.value);
+      const purchasePrice = num(el.purchasePrice.value);
+      const shippingFee = num(el.shippingFee.value);
+      const commissionRate = num(el.commissionRate.value);
+      const withholdingRate = num(el.withholdingRate.value);
+      const vatRate = num(el.vatRate.value);
+      const saleMode = el.saleMode.value;
+      const commissionBase = el.commissionBase.value;
+
+      const saleNet = saleMode === 'includingVat'
+        ? salePrice / (1 + vatRate / 100)
+        : salePrice;
+
+      const commissionCalculationBase = commissionBase === 'saleNet' ? saleNet : salePrice;
+      const commissionFee = commissionCalculationBase * (commissionRate / 100);
+      const withholdingFee = saleNet * (withholdingRate / 100);
+      const profit = salePrice - purchasePrice - shippingFee - commissionFee - withholdingFee;
+
+      netSaleResult.textContent = tl(saleNet);
+      commissionResult.textContent = tl(commissionFee);
+      withholdingResult.textContent = tl(withholdingFee);
+      profitResult.textContent = tl(profit);
+
+      profitResult.classList.remove('profit-positive', 'profit-negative');
+      profitResult.classList.add(profit >= 0 ? 'profit-positive' : 'profit-negative');
+
+      formulaText.innerHTML = `
+        Formül: <strong>${tl(salePrice)}</strong> - <strong>${tl(purchasePrice)}</strong> - <strong>${tl(shippingFee)}</strong>
+        - <strong>${tl(commissionFee)}</strong> - <strong>${tl(withholdingFee)}</strong> =
+        <strong>${tl(profit)}</strong>
+      `;
+    }
+
+    function resetForm() {
+      el.salePrice.value = '1000';
+      el.purchasePrice.value = '500';
+      el.shippingFee.value = '80';
+      el.commissionRate.value = '21.5';
+      el.withholdingRate.value = '1';
+      el.vatRate.value = '20';
+      el.saleMode.value = 'includingVat';
+      el.commissionBase.value = 'salePrice';
+      calculate();
+    }
+
+    ids.forEach(id => {
+      el[id].addEventListener('input', calculate);
+      el[id].addEventListener('change', calculate);
+    });
+
+    calculateBtn.addEventListener('click', calculate);
+    resetBtn.addEventListener('click', resetForm);
+
+    calculate();
+  </script>
+</body>
+</html>
