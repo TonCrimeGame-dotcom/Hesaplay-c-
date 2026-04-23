@@ -938,11 +938,12 @@
           <h2>Trendyol pazar indeksi</h2>
         </div>
         <div class="market-note">
-          Public Trendyol sayfalarindan taranan indeks. Buradaki satis skoru tahminidir; resmi Trendyol satis adedi degildir. Server tarafli tarama engellenirse cache'i bilgisayarinda `npm run refresh:market-cache` ile ya da Trendyol tarayici oturumundan browser import ile yenileyebilirsin.
+          Public Trendyol sayfalarindan taranan indeks. Buradaki satis skoru tahminidir; resmi Trendyol satis adedi degildir. Import akisi artik ayri sayfada yonetilir. Siralama en yuksek yildiz ve yorumdan daha zayif kayitlara dogru iner.
         </div>
         <div class="stock-controls">
           <input id="marketSearch" type="text" placeholder="Urun, marka veya mense ara" />
           <button class="btn-secondary" id="refreshMarketBtn" type="button">Pazari tara</button>
+          <button class="btn-secondary" id="openMarketImportPageBtn" type="button">Import sayfasini ac</button>
         </div>
         <div class="stock-status" id="marketStatus">
           Public pazar indeksi manuel calisir. Taramayi butonla baslatabilirsin.
@@ -954,7 +955,7 @@
           <button class="stock-tab" type="button" data-market-tab="germany-top">Almanya + top</button>
         </div>
         <div id="marketArea" class="empty-state">
-          Pazar taramasi bu deployda otomatik baslamaz. Hazir oldugunda burada gorunecek.
+          Pazar taramasi bu deployda otomatik baslamaz. Importlar market-import.html uzerinden yonetilir. Hazir oldugunda burada gorunecek.
         </div>
       </div>
 
@@ -1037,6 +1038,7 @@
     const stockTabButtons = Array.from(document.querySelectorAll('[data-stock-tab]'));
     const marketSearch = document.getElementById('marketSearch');
     const refreshMarketBtn = document.getElementById('refreshMarketBtn');
+    const openMarketImportPageBtn = document.getElementById('openMarketImportPageBtn');
     const marketStatus = document.getElementById('marketStatus');
     const marketArea = document.getElementById('marketArea');
     const marketTabButtons = Array.from(document.querySelectorAll('[data-market-tab]'));
@@ -1053,6 +1055,10 @@
 
     function getMarketActionLabel() {
       return canRunLiveMarketRefresh ? 'Pazari tara' : 'Cachei getir';
+    }
+
+    function getMarketImportPageUrl() {
+      return apiUrl('/market-import.html');
     }
 
     function updateClock() {
@@ -1408,6 +1414,15 @@
       return Math.max(300, pivotScore);
     }
 
+    function sortMarketItemsForDisplay(items) {
+      return [...items].sort((a, b) => {
+        if ((b.rating || 0) !== (a.rating || 0)) return (b.rating || 0) - (a.rating || 0);
+        if ((b.reviewCount || 0) !== (a.reviewCount || 0)) return (b.reviewCount || 0) - (a.reviewCount || 0);
+        if ((b.popularityScore || 0) !== (a.popularityScore || 0)) return (b.popularityScore || 0) - (a.popularityScore || 0);
+        return String(a.title || '').localeCompare(String(b.title || ''), 'tr');
+      });
+    }
+
     function getMarketTabItems(data) {
       const allItems = Array.isArray(data?.items) ? data.items : [];
       const germanyItems = allItems.filter(item => item.isGermanyOrigin);
@@ -1415,10 +1430,10 @@
       const topItems = allItems.filter(item => (item.popularityScore || 0) >= topThreshold || item.popularityLabel);
       const germanyTopItems = topItems.filter(item => item.isGermanyOrigin);
 
-      if (activeMarketTab === 'germany') return germanyItems;
-      if (activeMarketTab === 'top') return topItems;
-      if (activeMarketTab === 'germany-top') return germanyTopItems;
-      return allItems;
+      if (activeMarketTab === 'germany') return sortMarketItemsForDisplay(germanyItems);
+      if (activeMarketTab === 'top') return sortMarketItemsForDisplay(topItems);
+      if (activeMarketTab === 'germany-top') return sortMarketItemsForDisplay(germanyTopItems);
+      return sortMarketItemsForDisplay(allItems);
     }
 
     function renderTrendyolMarketIndex(data) {
@@ -1447,7 +1462,7 @@
 
       if (!allItems.length) {
         marketArea.className = 'empty-state';
-        marketArea.innerHTML = 'Henuz public pazar indeksi yok. Ilk tarama icin "Pazari tara" butonunu kullan.';
+        marketArea.innerHTML = 'Henuz public pazar indeksi yok. Ilk import icin "Import sayfasini ac" butonunu kullan.';
         return;
       }
 
@@ -1541,7 +1556,7 @@
         }
 
         if (response.status === 403) {
-          throw new Error('Trendyol public taramayi server tarafinda engelledi. Cache yenilemek icin `npm run refresh:market-cache` kullan ya da browser import scriptini Trendyol sayfasinda calistir.');
+          throw new Error('Trendyol public taramayi server tarafinda engelledi. Cache yenilemek icin import sayfasini kullan ya da `npm run refresh:market-cache` calistir.');
         }
 
         if (!response.ok) {
@@ -1553,7 +1568,7 @@
         renderTrendyolMarketIndex(marketIndexCache);
 
         if (!canRunLiveMarketRefresh && !marketIndexCache?.meta?.indexedAt) {
-          marketStatus.textContent = 'Cache bos. Once npm run refresh:market-cache calistir ya da browser import scriptini Trendyol sayfasinda kullan; sonra bu sayfayi yenile veya "Cachei getir"e bas.';
+          marketStatus.textContent = 'Cache bos. Once import sayfasindan kategori importu yap ya da npm run refresh:market-cache calistir; sonra bu sayfayi yenile veya "Cachei getir"e bas.';
         }
       } catch (error) {
         marketStatus.textContent = 'Public indeks hazir degil.';
@@ -1929,6 +1944,9 @@
     refreshRateBtn.addEventListener('click', fetchEuroRate);
     refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
     refreshMarketBtn.addEventListener('click', () => fetchTrendyolMarketIndex({ refresh: true }));
+    openMarketImportPageBtn.addEventListener('click', () => {
+      window.open(getMarketImportPageUrl(), '_blank', 'noopener,noreferrer');
+    });
     importTrendyolRecordsBtn.addEventListener('click', importTrendyolRecords);
     recordSearch.addEventListener('input', () => renderRecords(recordsCache));
     marketSearch.addEventListener('input', () => {
@@ -1967,8 +1985,8 @@
     resetBtn.addEventListener('click', resetForm);
     refreshMarketBtn.textContent = getMarketActionLabel();
     marketStatus.textContent = canRunLiveMarketRefresh
-      ? 'Public pazar indeksi manuel calisir. Taramayi butonla baslatabilirsin.'
-      : 'Canli sitede sadece cache okunur. Yeni veri icin lokal yenileyiciyi calistirip sonra "Cachei getir"e bas.';
+      ? 'Public pazar indeksi manuel calisir. Yeni kategori importlari ayri import sayfasinda yonetilir.'
+      : 'Canli sitede sadece cache okunur. Yeni veri icin import sayfasini kullanip sonra "Cachei getir"e bas.';
 
     recordsArea.addEventListener('click', event => {
       const button = event.target.closest('button[data-action]');
