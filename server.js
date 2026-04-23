@@ -2,6 +2,10 @@ const http = require('http');
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
+const {
+  buildEmptyMarketPayload,
+  refreshPublicMarketIndex
+} = require('./lib/trendyol-market');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
@@ -11,6 +15,9 @@ const DATA_FILE = process.env.DATA_FILE
 const NOTES_FILE = process.env.NOTES_FILE
   ? path.resolve(process.env.NOTES_FILE)
   : path.join(ROOT, 'data', 'notes.json');
+const MARKET_INDEX_FILE = process.env.MARKET_INDEX_FILE
+  ? path.resolve(process.env.MARKET_INDEX_FILE)
+  : path.join(ROOT, 'data', 'trendyol-market-index.json');
 const DATA_DIR = path.dirname(DATA_FILE);
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -125,6 +132,27 @@ async function readNotes() {
 async function writeNotes(notes) {
   await fs.mkdir(path.dirname(NOTES_FILE), { recursive: true });
   await fs.writeFile(NOTES_FILE, JSON.stringify(notes, null, 2), 'utf8');
+}
+
+async function readMarketIndex() {
+  try {
+    const content = await fs.readFile(MARKET_INDEX_FILE, 'utf8');
+    const payload = JSON.parse(content);
+
+    if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
+      return buildEmptyMarketPayload();
+    }
+
+    return payload;
+  } catch (error) {
+    if (error.code === 'ENOENT') return buildEmptyMarketPayload();
+    throw error;
+  }
+}
+
+async function writeMarketIndex(payload) {
+  await fs.mkdir(path.dirname(MARKET_INDEX_FILE), { recursive: true });
+  await fs.writeFile(MARKET_INDEX_FILE, JSON.stringify(payload, null, 2), 'utf8');
 }
 
 function readBody(req) {
@@ -315,6 +343,28 @@ async function importTrendyolRecords(url) {
 }
 
 async function handleApi(req, res, url) {
+  if (req.method === 'GET' && url.pathname === '/api/trendyol-market-index') {
+    send(res, 200, await readMarketIndex());
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/trendyol-market-index') {
+    try {
+      const body = await readBody(req).catch(() => ({}));
+      const payload = await refreshPublicMarketIndex({
+        terms: Array.isArray(body.terms) ? body.terms : undefined,
+        pageLimit: body.pageLimit,
+        detailLimit: body.detailLimit
+      });
+
+      await writeMarketIndex(payload);
+      send(res, 200, payload);
+    } catch (error) {
+      send(res, error.status || 500, { error: error.message || 'Public Trendyol pazari taranamadi.' });
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/trendyol-stock') {
     try {
       send(res, 200, await getTrendyolStock(url));
