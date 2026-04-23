@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>E-Ticaret Kâr Hesaplayıcı</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      padding: 24px;
+    }
+    .site-topbar {
+      display: grid;
+      grid-template-columns: 220px minmax(280px, 360px) 1fr;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .brand-area {
+      display: flex;
+      align-items: center;
+    }
+    .brand-logo {
+      display: block;
+      width: min(190px, 48vw);
+      height: auto;
+    }
+    .topbar-center {
+      justify-self: center;
+      width: 100%;
+    }
+    .topbar-right {
+      justify-self: end;
+      min-width: 210px;
+    }
+    .date-time-box {
+      text-align: right;
+      color: #374151;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+    .clock-list {
+      display: grid;
+      gap: 5px;
+    }
+    .clock-item {
+      display: flex;
+      justify-content: flex-end;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .date-time-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+    }
+    .date-time-value {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .date-line {
+      margin-bottom: 6px;
+      color: #374151;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .euro-tool {
+      width: 100%;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fafc;
+    }
+    .euro-title {
+      margin-bottom: 8px;
+      color: #374151;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: right;
+    }
+    .euro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .euro-field label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .euro-field input {
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 14px;
+    }
+    .rate-summary {
+      margin-top: 8px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #059669;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: right;
+    }
+    .euro-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .euro-status {
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+    }
+    .btn-mini {
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    p.desc {
+      margin: 0 0 24px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    .signature-name {
+      display: inline-block;
+      margin-left: 10px;
+      font-family: 'Dancing Script', 'Segoe Script', 'Brush Script MT', cursive;
+      font-size: 30px;
+      font-weight: 700;
+      color: #0f766e;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 16px;
+      outline: none;
+      background: #fff;
+      font-family: inherit;
+    }
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .results {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .result-box {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .result-title {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .result-value {
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .profit-positive { color: #059669; }
+    .profit-negative { color: #dc2626; }
+    .footer-note {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .saved-section {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 24px;
+    }
+    .saved-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .saved-header h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .admin-controls {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-note {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .records-table-wrap {
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+    .record-window {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .record-search-row {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f8fafc;
+    }
+    .record-search-row input {
+      border-radius: 8px;
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+    .record-window .records-table-wrap {
+      max-height: 260px;
+      overflow: auto;
+      border: 0;
+      border-radius: 0;
+    }
+    .record-window th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .record-card-scroll {
+      max-height: 530px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      background: #f9fafb;
+    }
+    .record-card {
+      display: grid;
+      grid-template-columns: 50px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 118px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .record-card-thumb {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .record-card-title {
+      margin: 0 0 6px;
+      color: #111827;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .record-card-meta {
+      color: #6b7280;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+    .record-card-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .record-card-stat {
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 8px;
+      min-width: 0;
+    }
+    .record-card-stat span {
+      display: block;
+      margin-bottom: 4px;
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .record-card-stat strong {
+      display: block;
+      color: #111827;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .record-card-actions {
+      display: grid;
+      gap: 8px;
+      min-width: 72px;
+    }
+    .record-card-actions button {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      background: #fff;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    th {
+      background: #f8fafc;
+      color: #374151;
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+    .table-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .table-actions button {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    .empty-state {
+      border: 1px dashed #d1d5db;
+      border-radius: 12px;
+      padding: 16px;
+      color: #6b7280;
+      line-height: 1.5;
+      background: #fafafa;
+    }
+    .stock-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stock-status {
+      margin-bottom: 12px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .record-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .record-status {
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .stock-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .stock-tab {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .stock-tab.active {
+      background: #111827;
+      color: #fff;
+    }
+    .stock-amount {
+      font-weight: 800;
+    }
+    .stock-low {
+      color: #dc2626;
+    }
+    .stock-ok {
+      color: #059669;
+    }
+    .stock-product-name {
+      max-width: 280px;
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .stock-mobile-list {
+      display: none;
+    }
+    .stock-mobile-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .stock-mobile-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+    .stock-mobile-title {
+      margin: 0;
+      color: #111827;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .stock-mobile-count {
+      min-width: 54px;
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #ecfdf5;
+      color: #047857;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .stock-mobile-count.stock-low {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .stock-mobile-meta {
+      margin-top: 8px;
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+    .market-section {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 24px;
+    }
+    .market-note {
+      margin-bottom: 12px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .market-mobile-list {
+      display: none;
+    }
+    .market-mobile-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+    .market-mobile-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .market-mobile-title {
+      margin: 0;
+      color: #111827;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .market-mobile-meta {
+      margin-top: 8px;
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .market-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .market-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .market-chip.origin-germany {
+      background: #ecfdf5;
+      color: #047857;
+    }
+    .market-chip.market-top {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+    .market-chip.market-muted {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+    .market-score {
+      font-weight: 800;
+      color: #111827;
+      white-space: nowrap;
+    }
+    .market-link {
+      color: #2563eb;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .market-link:hover {
+      text-decoration: underline;
+    }
+    .market-table .stock-product-name {
+      max-width: 320px;
+    }
+    .notes-section {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 24px;
+    }
+    .notes-form {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .notes-list {
+      display: grid;
+      gap: 10px;
+    }
+    .note-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .note-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .note-meta button {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+    .note-text {
+      margin: 0;
+      color: #374151;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .formula {
+      margin-top: 18px;
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.6;
+      background: #fafafa;
+      border: 1px dashed #d1d5db;
+      padding: 14px;
+      border-radius: 12px;
+    }
+    @media (max-width: 560px) {
+      .grid, .results { grid-template-columns: 1fr; }
+      .site-topbar {
+        align-items: center;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .topbar-center,
+      .topbar-right {
+        min-width: 0;
+      }
+      .topbar-center {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-self: stretch;
+      }
+      .topbar-right {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+      }
+      .brand-area {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .brand-logo {
+        width: min(210px, 56vw);
+      }
+      .date-time-box {
+        text-align: right;
+        white-space: normal;
+      }
+      .clock-item {
+        justify-content: flex-end;
+      }
+      .date-line,
+      .date-time-value {
+        font-size: 16px;
+      }
+      .euro-tool {
+        max-width: none;
+      }
+      .euro-title,
+      .rate-summary {
+        text-align: left;
+      }
+      .euro-meta {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .stock-controls {
+        grid-template-columns: 1fr;
+      }
+      .record-tools {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .record-card {
+        grid-template-columns: 42px minmax(0, 1fr);
+        align-items: start;
+      }
+      .record-card-thumb {
+        width: 42px;
+        height: 42px;
+        font-size: 18px;
+      }
+      .record-card-actions {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1fr;
+      }
+      .record-card-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .stock-table {
+        display: none;
+      }
+      .stock-mobile-list {
+        display: grid;
+        gap: 10px;
+      }
+      .market-table {
+        display: none;
+      }
+      .market-mobile-list {
+        display: grid;
+        gap: 10px;
+      }
+      .result-value { font-size: 24px; }
+      .wrap { margin: 0; padding: 10px; }
+      .card { border-radius: 0; min-height: 100vh; }
+    }
+    @media (min-width: 561px) and (max-width: 980px) {
+      .site-topbar {
+        grid-template-columns: 190px 1fr;
+      }
+      .topbar-right {
+        grid-column: 1 / -1;
+        justify-self: end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="site-topbar">
+        <div class="brand-area">
+          <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
+        </div>
+        <div class="topbar-center">
+          <div class="euro-tool" aria-label="Euro TL hesaplayıcı">
+            <div class="euro-title">Euro / TL</div>
+            <div class="euro-grid">
+              <div class="euro-field">
+                <label for="eurAmount">Euro</label>
+                <input id="eurAmount" type="number" min="0" step="0.01" placeholder="Euro yaz" />
+              </div>
+              <div class="euro-field">
+                <label for="tryAmount">TL</label>
+                <input id="tryAmount" type="number" min="0" step="0.01" placeholder="TL yaz" />
+              </div>
+            </div>
+            <div class="rate-summary" id="eurTryResult">Kur otomatik alınıyor.</div>
+            <div class="euro-meta">
+              <span class="euro-status" id="eurRateStatus">Kur otomatik alınıyor.</span>
+              <button class="btn-secondary btn-mini" id="refreshRateBtn" type="button">Kuru yenile</button>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="date-time-box" aria-live="polite">
+            <div class="date-line" id="currentDateValue">Yükleniyor</div>
+            <div class="clock-list">
+              <div class="clock-item">
+                <span class="date-time-value" id="istanbulTimeValue">--:--:--</span>
+                <span class="date-time-label">TR</span>
+              </div>
+              <div class="clock-item">
+                <span class="date-time-value" id="dusseldorfTimeValue">--:--:--</span>
+                <span class="date-time-label">DE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h1>E-Ticaret Kâr Hesaplayıcı</h1>
+      <p class="desc">
+        YİĞİT BEY UMARIM BEĞENİRSİNİZ VE İSTEDİĞİNİZ ÖZELLİĞİ EKLEYEBİLİRİZ.
+        <span class="signature-name">Yağız</span>
+      </p>
+
+      <div class="grid">
+        <div class="field">
+          <label for="recordName">Ürün / kayıt adı</label>
+          <input id="recordName" type="text" placeholder="Örn: Trendyol kulaklık" />
+        </div>
+
+        <div class="field">
+          <label for="recordBarcode">Trendyol barkod</label>
+          <input id="recordBarcode" type="text" placeholder="Trendyol ürün barkodu" />
+        </div>
+
+        <div class="field">
+          <label for="salePrice">Satış fiyatı (TL)</label>
+          <input id="salePrice" type="number" min="0" step="0.01" value="1000" />
+        </div>
+
+        <div class="field">
+          <label for="purchasePrice">Ürün alış fiyatı (TL)</label>
+          <input id="purchasePrice" type="number" min="0" step="0.01" value="500" />
+        </div>
+
+        <div class="field">
+          <label for="shippingFee">Kargo ücreti (TL)</label>
+          <input id="shippingFee" type="number" min="0" step="0.01" value="80" />
+        </div>
+
+        <div class="field">
+          <label for="commissionRate">Komisyon oranı (%)</label>
+          <input id="commissionRate" type="number" min="0" step="0.01" value="19" />
+        </div>
+
+        <div class="field">
+          <label for="withholdingRate">E-stopaj oranı (%)</label>
+          <input id="withholdingRate" type="number" min="0" step="0.01" value="1" />
+        </div>
+
+        <div class="field">
+          <label for="vatRate">KDV oranı (%)</label>
+          <input id="vatRate" type="number" min="0" step="0.01" value="1" />
+        </div>
+
+      </div>
+
+      <div class="results">
+        <div class="result-box">
+          <div class="result-title">KDV hariç satış tutarı</div>
+          <div class="result-value" id="netSaleResult">₺0,00</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">Komisyon bedeli</div>
+          <div class="result-value" id="commissionResult">₺0,00</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">E-stopaj bedeli</div>
+          <div class="result-value" id="withholdingResult">₺0,00</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">Net kâr</div>
+          <div class="result-value" id="profitResult">₺0,00</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="calculateBtn">Hesapla</button>
+        <button class="btn-secondary" id="saveBtn">Kaydet</button>
+        <button class="btn-secondary" id="resetBtn">Sıfırla</button>
+      </div>
+
+      <div class="formula" id="formulaText">
+        Formül: Kâr = Satış fiyatı - Alış fiyatı - Kargo - Komisyon bedeli - E-stopaj bedeli
+      </div>
+
+      <div class="saved-section">
+        <div class="saved-header">
+          <h2>Ortak ürün kayıtları</h2>
+          <div class="admin-controls">
+            <span class="admin-note" id="adminNote">Silme kapalı</span>
+            <button class="btn-secondary" id="adminModeBtn" type="button">Yönetici modu</button>
+          </div>
+        </div>
+        <div class="record-tools">
+          <button class="btn-secondary" id="importTrendyolRecordsBtn" type="button">Trendyol ürünlerini ortak kayıtlara aktar</button>
+          <button class="btn-secondary" id="cancelEditBtn" type="button" hidden>Yeni kayıt moduna geç</button>
+          <span class="record-status" id="recordEditStatus">Kayıtlar barkoda göre eşleşir.</span>
+        </div>
+        <div class="record-window">
+          <div class="record-search-row">
+            <input id="recordSearch" type="search" placeholder="Ürün adı veya barkod ara" autocomplete="off" />
+          </div>
+          <div id="recordsArea" class="empty-state">
+            Ortak kayıtlar yükleniyor.
+          </div>
+        </div>
+      </div>
+
+      <div class="saved-section">
+        <div class="saved-header">
+          <h2>Trendyol stok bilgisi</h2>
+        </div>
+        <div class="stock-controls">
+          <input id="trendyolStockSearch" type="text" placeholder="Barkod ile ara veya boş bırak" />
+          <button class="btn-secondary" id="refreshTrendyolStockBtn" type="button">Stokları yenile</button>
+        </div>
+        <div class="stock-status" id="trendyolStockStatus">
+          Sadece okuma modu. Bu alandan stok değiştirilemez.
+        </div>
+        <div class="stock-tabs" aria-label="Stok filtreleri">
+          <button class="stock-tab active" type="button" data-stock-tab="available">Stokta olanlar</button>
+          <button class="stock-tab" type="button" data-stock-tab="zero">Stok 0 ürünler</button>
+        </div>
+        <div id="trendyolStockArea" class="empty-state">
+          Stok bilgisi yükleniyor.
+        </div>
+      </div>
+
+      <div class="market-section">
+        <div class="saved-header">
+          <h2>Trendyol pazar indeksi</h2>
+        </div>
+        <div class="market-note">
+          Public Trendyol sayfalarindan taranan indeks. Buradaki satis skoru tahminidir; resmi Trendyol satis adedi degildir. Server tarafli tarama engellenirse cache'i bilgisayarinda `npm run refresh:market-cache` ile ya da Trendyol tarayici oturumundan browser import ile yenileyebilirsin.
+        </div>
+        <div class="stock-controls">
+          <input id="marketSearch" type="text" placeholder="Urun, marka veya mense ara" />
+          <button class="btn-secondary" id="refreshMarketBtn" type="button">Pazari tara</button>
+        </div>
+        <div class="stock-status" id="marketStatus">
+          Public pazar indeksi manuel calisir. Taramayi butonla baslatabilirsin.
+        </div>
+        <div class="stock-tabs" aria-label="Pazar filtreleri">
+          <button class="stock-tab active" type="button" data-market-tab="all">Tum indeks</button>
+          <button class="stock-tab" type="button" data-market-tab="germany">Almanya menseili</button>
+          <button class="stock-tab" type="button" data-market-tab="top">En guclu satis sinyali</button>
+          <button class="stock-tab" type="button" data-market-tab="germany-top">Almanya + top</button>
+        </div>
+        <div id="marketArea" class="empty-state">
+          Pazar taramasi bu deployda otomatik baslamaz. Hazir oldugunda burada gorunecek.
+        </div>
+      </div>
+
+      <div class="notes-section">
+        <div class="saved-header">
+          <h2>Ortak notlar</h2>
+        </div>
+        <div class="notes-form">
+          <div class="field">
+            <label for="noteText">Not ekle</label>
+            <textarea id="noteText" maxlength="500" placeholder="Herkesin göreceği notu buraya yaz."></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn-primary" id="saveNoteBtn" type="button">Notu kaydet</button>
+          </div>
+        </div>
+        <div id="notesArea" class="empty-state">
+          Ortak notlar yükleniyor.
+        </div>
+      </div>
+
+      <div class="footer-note">
+        Not: Bu sürüm pratik kullanım için hazırlanmıştır. E-stopaj alanı varsayılan olarak %1 gelir.
+        İstersen sonraki adımda buna reklam gideri, paketleme, KDV, iade zararı ve farklı pazaryeri komisyonlarını da ekleyebilirim.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let recordsCache = [];
+    let notesCache = [];
+    let trendyolStockCache = null;
+    let activeStockTab = 'available';
+    let marketIndexCache = null;
+    let activeMarketTab = 'all';
+    let editingRecordId = null;
+    let eurTryRate = 0;
+    let currencySource = 'eur';
+    const RATE_CACHE_KEY = 'eurTryRateCache';
+    const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const canRunLiveMarketRefresh = isLocalHost || window.location.protocol === 'file:';
+    const usesSeparateLocalServer = window.location.protocol === 'file:'
+      || (isLocalHost && window.location.port && window.location.port !== '3000');
+    const API_BASE = usesSeparateLocalServer ? 'http://localhost:3000' : '';
+    const ids = [
+      'salePrice',
+      'purchasePrice',
+      'shippingFee',
+      'commissionRate',
+      'withholdingRate',
+      'vatRate'
+    ];
+
+    const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    el.recordName = document.getElementById('recordName');
+    el.recordBarcode = document.getElementById('recordBarcode');
+
+    const netSaleResult = document.getElementById('netSaleResult');
+    const commissionResult = document.getElementById('commissionResult');
+    const withholdingResult = document.getElementById('withholdingResult');
+    const profitResult = document.getElementById('profitResult');
+    const formulaText = document.getElementById('formulaText');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const recordsArea = document.getElementById('recordsArea');
+    const recordSearch = document.getElementById('recordSearch');
+    const currentDateValue = document.getElementById('currentDateValue');
+    const istanbulTimeValue = document.getElementById('istanbulTimeValue');
+    const dusseldorfTimeValue = document.getElementById('dusseldorfTimeValue');
+    const eurAmount = document.getElementById('eurAmount');
+    const tryAmount = document.getElementById('tryAmount');
+    const eurTryResult = document.getElementById('eurTryResult');
+    const eurRateStatus = document.getElementById('eurRateStatus');
+    const refreshRateBtn = document.getElementById('refreshRateBtn');
+    const trendyolStockSearch = document.getElementById('trendyolStockSearch');
+    const refreshTrendyolStockBtn = document.getElementById('refreshTrendyolStockBtn');
+    const trendyolStockStatus = document.getElementById('trendyolStockStatus');
+    const trendyolStockArea = document.getElementById('trendyolStockArea');
+    const stockTabButtons = Array.from(document.querySelectorAll('[data-stock-tab]'));
+    const marketSearch = document.getElementById('marketSearch');
+    const refreshMarketBtn = document.getElementById('refreshMarketBtn');
+    const marketStatus = document.getElementById('marketStatus');
+    const marketArea = document.getElementById('marketArea');
+    const marketTabButtons = Array.from(document.querySelectorAll('[data-market-tab]'));
+    const importTrendyolRecordsBtn = document.getElementById('importTrendyolRecordsBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const recordEditStatus = document.getElementById('recordEditStatus');
+    const noteText = document.getElementById('noteText');
+    const saveNoteBtn = document.getElementById('saveNoteBtn');
+    const notesArea = document.getElementById('notesArea');
+
+    function apiUrl(path) {
+      return `${API_BASE}${path}`;
+    }
+
+    function getMarketActionLabel() {
+      return canRunLiveMarketRefresh ? 'Pazari tara' : 'Cachei getir';
+    }
+
+    function updateClock() {
+      currentDateValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Europe/Istanbul'
+      }).format(new Date()).replace('.', '');
+
+      istanbulTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Europe/Istanbul'
+      }).format(new Date());
+
+      dusseldorfTimeValue.textContent = new Intl.DateTimeFormat('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Europe/Berlin'
+      }).format(new Date());
+    }
+
+    function num(v) {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function tl(v) {
+      return new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: 'TRY',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(v || 0);
+    }
+
+    function plainMoney(v) {
+      if (!Number.isFinite(v)) return '';
+      return String(Math.round(v * 100) / 100);
+    }
+
+    function setEuroRate(rate, date, sourceText) {
+      eurTryRate = Number(rate) || 0;
+
+      if (!eurTryRate) {
+        eurTryResult.textContent = 'Kur bekleniyor.';
+        return;
+      }
+
+      eurTryResult.textContent = `1 EUR = ${tl(eurTryRate)}`;
+      eurRateStatus.textContent = date
+        ? `${sourceText}: ${date}`
+        : sourceText;
+      calculateEuroTry(currencySource);
+    }
+
+    function calculateEuroTry(source = currencySource) {
+      currencySource = source;
+
+      if (!eurTryRate) {
+        eurTryResult.textContent = 'Kur bekleniyor.';
+        return;
+      }
+
+      if (source === 'eur') {
+        const amount = num(eurAmount.value);
+        tryAmount.value = eurAmount.value === '' ? '' : plainMoney(amount * eurTryRate);
+        return;
+      }
+
+      const amount = num(tryAmount.value);
+      eurAmount.value = tryAmount.value === '' ? '' : plainMoney(amount / eurTryRate);
+    }
+
+    async function fetchEuroRate() {
+      refreshRateBtn.disabled = true;
+      eurRateStatus.textContent = 'Kur otomatik alınıyor.';
+
+      try {
+        const response = await fetch('https://api.frankfurter.dev/v2/rate/EUR/TRY');
+
+        if (!response.ok) {
+          throw new Error('Kur alınamadı.');
+        }
+
+        const data = await response.json();
+
+        if (!data.rate) {
+          throw new Error('Kur yanıtı beklenen formatta değil.');
+        }
+
+        localStorage.setItem(RATE_CACHE_KEY, JSON.stringify({
+          rate: Number(data.rate),
+          date: data.date,
+          storedAt: new Date().toISOString()
+        }));
+        setEuroRate(data.rate, data.date, 'Güncel kur');
+      } catch (error) {
+        if (!eurTryRate) {
+          eurRateStatus.textContent = 'Kur otomatik alınamadı.';
+          eurTryResult.textContent = 'Kur alınamadı.';
+        } else {
+          eurRateStatus.textContent = 'Kur yenilenemedi, son alınan kur kullanılıyor.';
+        }
+      } finally {
+        refreshRateBtn.disabled = false;
+      }
+    }
+
+    function loadCachedEuroRate() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(RATE_CACHE_KEY) || '{}');
+        if (!cached.rate) return;
+        setEuroRate(cached.rate, cached.date, 'Son alınan kur');
+      } catch (error) {
+        localStorage.removeItem(RATE_CACHE_KEY);
+      }
+    }
+
+    function percent(v) {
+      return new Intl.NumberFormat('tr-TR', {
+        style: 'percent',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      }).format(v || 0);
+    }
+
+    function getCalculation() {
+      const salePrice = num(el.salePrice.value);
+      const purchasePrice = num(el.purchasePrice.value);
+      const shippingFee = num(el.shippingFee.value);
+      const commissionRate = num(el.commissionRate.value);
+      const withholdingRate = num(el.withholdingRate.value);
+      const vatRate = num(el.vatRate.value);
+      const saleMode = 'includingVat';
+      const commissionBase = 'salePrice';
+
+      const saleNet = salePrice / (1 + vatRate / 100);
+      const commissionCalculationBase = salePrice;
+      const commissionFee = commissionCalculationBase * (commissionRate / 100);
+      const withholdingFee = saleNet * (withholdingRate / 100);
+      const profit = salePrice - purchasePrice - shippingFee - commissionFee - withholdingFee;
+
+      return {
+        inputs: {
+          salePrice,
+          purchasePrice,
+          shippingFee,
+          commissionRate,
+          withholdingRate,
+          vatRate,
+          saleMode,
+          commissionBase
+        },
+        results: {
+          saleNet,
+          commissionFee,
+          withholdingFee,
+          profit
+        }
+      };
+    }
+
+    function calculate() {
+      const calculation = getCalculation();
+      const { salePrice, purchasePrice, shippingFee } = calculation.inputs;
+      const { saleNet, commissionFee, withholdingFee, profit } = calculation.results;
+
+      netSaleResult.textContent = tl(saleNet);
+      commissionResult.textContent = tl(commissionFee);
+      withholdingResult.textContent = tl(withholdingFee);
+      profitResult.textContent = tl(profit);
+
+      profitResult.classList.remove('profit-positive', 'profit-negative');
+      profitResult.classList.add(profit >= 0 ? 'profit-positive' : 'profit-negative');
+
+      formulaText.innerHTML = `
+        Formül: <strong>${tl(salePrice)}</strong> - <strong>${tl(purchasePrice)}</strong> - <strong>${tl(shippingFee)}</strong>
+        - <strong>${tl(commissionFee)}</strong> - <strong>${tl(withholdingFee)}</strong> =
+        <strong>${tl(profit)}</strong>
+      `;
+
+      return calculation;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function normalizeSearchText(value) {
+      return String(value || '')
+        .toLocaleLowerCase('tr-TR')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function getRecordInitial(name) {
+      return String(name || 'Ü').trim().charAt(0).toLocaleUpperCase('tr-TR') || 'Ü';
+    }
+
+    function formatDate(value) {
+      return new Intl.DateTimeFormat('tr-TR', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      }).format(new Date(value));
+    }
+
+    function formatTrendyolDate(value) {
+      if (!value) return '-';
+      const date = typeof value === 'number' ? new Date(value) : new Date(value);
+      return Number.isNaN(date.getTime()) ? '-' : formatDate(date);
+    }
+
+    function normalizeBarcode(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function findProfitRecordForBarcode(barcode) {
+      const normalizedBarcode = normalizeBarcode(barcode);
+      if (!normalizedBarcode) return null;
+
+      return recordsCache.find(record => normalizeBarcode(record.barcode) === normalizedBarcode) || null;
+    }
+
+    function setEditingRecord(record) {
+      editingRecordId = record?.id || null;
+      saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
+      cancelEditBtn.hidden = !editingRecordId;
+      recordEditStatus.textContent = editingRecordId
+        ? `"${record.name}" düzenleniyor. Geliş fiyatını değiştirip Kaydı güncelle diyebilirsin.`
+        : 'Kayıtlar barkoda göre eşleşir.';
+    }
+
+    function updateStockTabs() {
+      stockTabButtons.forEach(button => {
+        button.classList.toggle('active', button.dataset.stockTab === activeStockTab);
+      });
+    }
+
+    function renderTrendyolStock(data) {
+      const allItems = data.items || [];
+      const availableItems = allItems.filter(item => item.quantity > 0);
+      const zeroItems = allItems.filter(item => item.quantity <= 0);
+      const items = activeStockTab === 'zero' ? zeroItems : availableItems;
+      const tabLabel = activeStockTab === 'zero' ? 'stok 0 ürün' : 'stokta olan ürün';
+
+      updateStockTabs();
+      trendyolStockStatus.textContent = `Sadece okuma modu. ${items.length} ${tabLabel} gösteriliyor. Stokta: ${availableItems.length}, stok 0: ${zeroItems.length}. Son kontrol: ${formatDate(data.fetchedAt)}.`;
+
+      if (!items.length) {
+        trendyolStockArea.className = 'empty-state';
+        trendyolStockArea.innerHTML = activeStockTab === 'zero'
+          ? 'Stok 0 ürün bulunamadı.'
+          : 'Stokta olan ürün bulunamadı.';
+        return;
+      }
+
+      trendyolStockArea.className = 'records-table-wrap';
+      trendyolStockArea.innerHTML = `
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th>Ürün</th>
+              <th>Barkod</th>
+              <th>Stok kodu</th>
+              <th>Stok</th>
+              <th>Kayıtlı kâr</th>
+              <th>Satış fiyatı</th>
+              <th>Liste fiyatı</th>
+              <th>Marka</th>
+              <th>Kategori</th>
+              <th>Son güncelleme</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => {
+              const profitRecord = findProfitRecordForBarcode(item.barcode);
+              const profit = profitRecord?.results?.profit;
+
+              return `
+              <tr>
+                <td class="stock-product-name">${escapeHtml(item.title || '-')}</td>
+                <td>${escapeHtml(item.barcode || '-')}</td>
+                <td>${escapeHtml(item.stockCode || '-')}</td>
+                <td class="stock-amount ${item.quantity <= 0 ? 'stock-low' : 'stock-ok'}">${item.quantity}</td>
+                <td class="${profitRecord ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : ''}">
+                  ${profitRecord ? tl(profit) : 'Kayıt yok'}
+                </td>
+                <td>${tl(item.salePrice)}</td>
+                <td>${tl(item.listPrice)}</td>
+                <td>${escapeHtml(item.brand || '-')}</td>
+                <td>${escapeHtml(item.categoryName || '-')}</td>
+                <td>${formatTrendyolDate(item.lastUpdateDate)}</td>
+              </tr>
+            `}).join('')}
+          </tbody>
+        </table>
+        <div class="stock-mobile-list">
+          ${items.map(item => {
+            const profitRecord = findProfitRecordForBarcode(item.barcode);
+            const profit = profitRecord?.results?.profit;
+
+            return `
+              <div class="stock-mobile-card">
+                <div class="stock-mobile-top">
+                  <p class="stock-mobile-title">${escapeHtml(item.title || '-')}</p>
+                  <div class="stock-mobile-count ${item.quantity <= 0 ? 'stock-low' : ''}">${item.quantity} stok</div>
+                </div>
+                <div class="stock-mobile-meta">
+                  Barkod: ${escapeHtml(item.barcode || '-')}<br>
+                  Kâr: ${profitRecord ? tl(profit) : 'Kayıt yok'}<br>
+                  Satış: ${tl(item.salePrice)}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function formatMarketScore(value) {
+      return new Intl.NumberFormat('tr-TR', {
+        maximumFractionDigits: 0
+      }).format(Number(value || 0));
+    }
+
+    function updateMarketTabs() {
+      marketTabButtons.forEach(button => {
+        button.classList.toggle('active', button.dataset.marketTab === activeMarketTab);
+      });
+    }
+
+    function getTopMarketScoreThreshold(items) {
+      if (!items.length) return Number.POSITIVE_INFINITY;
+
+      const sorted = [...items].sort((a, b) => (b.popularityScore || 0) - (a.popularityScore || 0));
+      const pivotIndex = Math.min(29, sorted.length - 1);
+      const pivotScore = Number(sorted[pivotIndex]?.popularityScore || 0);
+      return Math.max(300, pivotScore);
+    }
+
+    function getMarketTabItems(data) {
+      const allItems = Array.isArray(data?.items) ? data.items : [];
+      const germanyItems = allItems.filter(item => item.isGermanyOrigin);
+      const topThreshold = getTopMarketScoreThreshold(allItems);
+      const topItems = allItems.filter(item => (item.popularityScore || 0) >= topThreshold || item.popularityLabel);
+      const germanyTopItems = topItems.filter(item => item.isGermanyOrigin);
+
+      if (activeMarketTab === 'germany') return germanyItems;
+      if (activeMarketTab === 'top') return topItems;
+      if (activeMarketTab === 'germany-top') return germanyTopItems;
+      return allItems;
+    }
+
+    function renderTrendyolMarketIndex(data) {
+      const allItems = Array.isArray(data?.items) ? data.items : [];
+      const germanyItems = allItems.filter(item => item.isGermanyOrigin);
+      const topThreshold = getTopMarketScoreThreshold(allItems);
+      const topItems = allItems.filter(item => (item.popularityScore || 0) >= topThreshold || item.popularityLabel);
+      const items = getMarketTabItems(data);
+      const query = normalizeSearchText(marketSearch.value.trim());
+      const filteredItems = query
+        ? items.filter(item => {
+          const searchable = normalizeSearchText(`
+            ${item.title || ''}
+            ${item.brand || ''}
+            ${item.seller || ''}
+            ${item.originLabel || ''}
+            ${item.popularityLabel || ''}
+            ${(item.searchTerms || []).join(' ')}
+          `);
+          return searchable.includes(query);
+        })
+        : items;
+
+      updateMarketTabs();
+      marketStatus.textContent = `Public indeks. Gosterilen: ${filteredItems.length}. Toplam: ${allItems.length}. Almanya: ${germanyItems.length}. Guclu sinyal: ${topItems.length}. Son tarama: ${formatDate(data?.meta?.indexedAt)}.`;
+
+      if (!allItems.length) {
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = 'Henuz public pazar indeksi yok. Ilk tarama icin "Pazari tara" butonunu kullan.';
+        return;
+      }
+
+      if (!filteredItems.length) {
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = 'Bu filtrede urun bulunamadi.';
+        return;
+      }
+
+      marketArea.className = 'records-table-wrap';
+      marketArea.innerHTML = `
+        <table class="stock-table market-table">
+          <thead>
+            <tr>
+              <th>Urun</th>
+              <th>Mensei</th>
+              <th>Satis skoru</th>
+              <th>Populerlik</th>
+              <th>Fiyat</th>
+              <th>Puan / yorum</th>
+              <th>Satici</th>
+              <th>Baglanti</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredItems.map(item => `
+              <tr>
+                <td class="stock-product-name">${escapeHtml(item.title || '-')}<br><span style="color:#6b7280;">${escapeHtml(item.brand || '-')}</span></td>
+                <td>${item.isGermanyOrigin ? '<span class="market-chip origin-germany">Almanya</span>' : escapeHtml(item.originLabel || '-')}</td>
+                <td><span class="market-score">${formatMarketScore(item.popularityScore)}</span></td>
+                <td>${item.popularityLabel ? `<span class="market-chip market-top">${escapeHtml(item.popularityLabel)}${item.popularityRank ? ` #${item.popularityRank}` : ''}</span>` : '<span class="market-chip market-muted">Heuristik</span>'}</td>
+                <td>${item.price ? tl(item.price) : '-'}</td>
+                <td>${item.rating ? `${item.rating.toFixed(1)} / ${new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}` : new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}</td>
+                <td>${escapeHtml(item.seller || '-')}</td>
+                <td><a class="market-link" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer">Ac</a></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="market-mobile-list">
+          ${filteredItems.map(item => `
+            <div class="market-mobile-card">
+              <div class="market-mobile-head">
+                <p class="market-mobile-title">${escapeHtml(item.title || '-')}</p>
+                <div class="market-score">${formatMarketScore(item.popularityScore)}</div>
+              </div>
+              <div class="market-mobile-meta">
+                Marka: ${escapeHtml(item.brand || '-')}<br>
+                Satici: ${escapeHtml(item.seller || '-')}<br>
+                Fiyat: ${item.price ? tl(item.price) : '-'}<br>
+                Puan / Yorum: ${item.rating ? `${item.rating.toFixed(1)} / ${new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}` : new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}
+              </div>
+              <div class="market-badge-row">
+                ${item.isGermanyOrigin ? '<span class="market-chip origin-germany">Almanya</span>' : `<span class="market-chip market-muted">${escapeHtml(item.originLabel || 'Menşei yok')}</span>`}
+                ${item.popularityLabel ? `<span class="market-chip market-top">${escapeHtml(item.popularityLabel)}${item.popularityRank ? ` #${item.popularityRank}` : ''}</span>` : '<span class="market-chip market-muted">Heuristik skor</span>'}
+              </div>
+              <div class="market-badge-row">
+                <a class="market-link" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer">Trendyol urun sayfasini ac</a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function fetchTrendyolMarketIndex(options = {}) {
+      const refresh = Boolean(options.refresh) && canRunLiveMarketRefresh;
+
+      refreshMarketBtn.disabled = true;
+      refreshMarketBtn.textContent = refresh ? 'Taraniyor...' : 'Yukleniyor...';
+      marketStatus.textContent = refresh
+        ? 'Public Trendyol pazari taraniyor. Bu islem biraz surebilir.'
+        : 'Public pazar indeksi yukleniyor.';
+
+      if (!marketIndexCache || refresh) {
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = refresh
+          ? 'Public pazar taramasi suruyor.'
+          : 'Public pazar indeksi yukleniyor.';
+      }
+
+      try {
+        const response = await fetch(apiUrl('/api/trendyol-market-index'), {
+          method: refresh ? 'POST' : 'GET',
+          headers: refresh ? { 'Content-Type': 'application/json' } : undefined,
+          body: refresh ? JSON.stringify({ pageLimit: 2, detailLimit: 60 }) : undefined
+        });
+
+        if (response.status === 404) {
+          throw new Error('Bu deployda /api/trendyol-market-index endpointi yok. Vercel tarafinda yeniden deploy gerekiyor.');
+        }
+
+        if (response.status === 403) {
+          throw new Error('Trendyol public taramayi server tarafinda engelledi. Cache yenilemek icin `npm run refresh:market-cache` kullan ya da browser import scriptini Trendyol sayfasinda calistir.');
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Public pazar indeksi alinamadi.');
+        }
+
+        marketIndexCache = await response.json();
+        renderTrendyolMarketIndex(marketIndexCache);
+
+        if (!canRunLiveMarketRefresh && !marketIndexCache?.meta?.indexedAt) {
+          marketStatus.textContent = 'Cache bos. Once npm run refresh:market-cache calistir ya da browser import scriptini Trendyol sayfasinda kullan; sonra bu sayfayi yenile veya "Cachei getir"e bas.';
+        }
+      } catch (error) {
+        marketStatus.textContent = 'Public indeks hazir degil.';
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = escapeHtml(error.message);
+      } finally {
+        refreshMarketBtn.disabled = false;
+        refreshMarketBtn.textContent = getMarketActionLabel();
+      }
+    }
+
+    async function fetchTrendyolStock() {
+      const barcode = trendyolStockSearch.value.trim();
+      const query = new URLSearchParams({ size: '50' });
+
+      if (barcode) query.set('barcode', barcode);
+
+      activeStockTab = 'available';
+      updateStockTabs();
+      refreshTrendyolStockBtn.disabled = true;
+      refreshTrendyolStockBtn.textContent = 'Yükleniyor...';
+      trendyolStockStatus.textContent = 'Trendyol stok bilgisi alınıyor.';
+      trendyolStockArea.className = 'empty-state';
+      trendyolStockArea.innerHTML = 'Stok bilgisi yükleniyor.';
+
+      try {
+        const response = await fetch(apiUrl(`/api/trendyol-stock?${query.toString()}`));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Trendyol stok bilgisi alınamadı.');
+        }
+
+        trendyolStockCache = await response.json();
+        renderTrendyolStock(trendyolStockCache);
+      } catch (error) {
+        trendyolStockStatus.textContent = 'Sadece okuma modu.';
+        trendyolStockArea.className = 'empty-state';
+        trendyolStockArea.innerHTML = escapeHtml(error.message);
+      } finally {
+        refreshTrendyolStockBtn.disabled = false;
+        refreshTrendyolStockBtn.textContent = 'Stokları yenile';
+      }
+    }
+
+    function renderRecords(records) {
+      if (!records.length) {
+        recordsArea.className = 'empty-state';
+        recordsArea.innerHTML = "Henüz ortak kayıt yok. Bir ürün hesaplayıp Kaydet'e basınca siteye giren herkes burada görür.";
+        return;
+      }
+
+      const query = normalizeSearchText(recordSearch.value.trim());
+      const filteredRecords = query
+        ? records.filter(record => {
+          const searchable = normalizeSearchText(`${record.name || ''} ${record.barcode || ''}`);
+          return searchable.includes(query);
+        })
+        : records;
+
+      if (!filteredRecords.length) {
+        recordsArea.className = 'empty-state';
+        recordsArea.innerHTML = 'Aradığın ürün ortak kayıtlarda bulunamadı.';
+        return;
+      }
+
+      const sortedRecords = [...filteredRecords].sort((a, b) => b.results.profit - a.results.profit);
+
+      recordsArea.className = 'record-card-scroll';
+      recordsArea.innerHTML = `
+        ${sortedRecords.map(record => {
+          const profitRate = record.inputs.salePrice > 0
+            ? record.results.profit / record.inputs.salePrice
+            : 0;
+          const profitClass = record.results.profit >= 0 ? 'profit-positive' : 'profit-negative';
+
+          return `
+            <article class="record-card">
+              <div class="record-card-thumb">${escapeHtml(getRecordInitial(record.name))}</div>
+              <div class="record-card-body">
+                <p class="record-card-title">${escapeHtml(record.name)}</p>
+                <div class="record-card-meta">
+                  Barkod: ${escapeHtml(record.barcode || '-')} · ${formatDate(record.createdAt)}
+                </div>
+                <div class="record-card-stats">
+                  <div class="record-card-stat">
+                    <span>Satış</span>
+                    <strong>${tl(record.inputs.salePrice)}</strong>
+                  </div>
+                  <div class="record-card-stat">
+                    <span>Alış</span>
+                    <strong>${tl(record.inputs.purchasePrice)}</strong>
+                  </div>
+                  <div class="record-card-stat">
+                    <span>Kargo</span>
+                    <strong>${tl(record.inputs.shippingFee)}</strong>
+                  </div>
+                  <div class="record-card-stat">
+                    <span>Net kâr</span>
+                    <strong class="${profitClass}">${tl(record.results.profit)} · ${percent(profitRate)}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="record-card-actions">
+                <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
+                <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
+              </div>
+            </article>
+          `;
+        }).join('')}
+      `;
+    }
+
+    function renderNotes(notes) {
+      if (!notes.length) {
+        notesArea.className = 'empty-state';
+        notesArea.innerHTML = 'Henüz ortak not yok. İlk notu sen ekleyebilirsin.';
+        return;
+      }
+
+      notesArea.className = 'notes-list';
+      notesArea.innerHTML = notes.map(note => `
+        <div class="note-item">
+          <div class="note-meta">
+            ${formatDate(note.createdAt)}
+            <button class="btn-danger" type="button" data-action="delete-note" data-id="${note.id}">Sil</button>
+          </div>
+          <p class="note-text">${escapeHtml(note.note)}</p>
+        </div>
+      `).join('');
+    }
+
+    async function fetchRecords() {
+      recordsArea.className = 'empty-state';
+      recordsArea.innerHTML = 'Ortak kayıtlar yükleniyor.';
+
+      try {
+        const response = await fetch(apiUrl('/api/records'));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Kayıtlar alınamadı.');
+        }
+
+        recordsCache = await response.json();
+        renderRecords(recordsCache);
+        if (trendyolStockCache) renderTrendyolStock(trendyolStockCache);
+      } catch (error) {
+        recordsArea.className = 'empty-state';
+        recordsArea.innerHTML = escapeHtml(error.message);
+      }
+    }
+
+    async function fetchNotes() {
+      notesArea.className = 'empty-state';
+      notesArea.innerHTML = 'Ortak notlar yükleniyor.';
+
+      try {
+        const response = await fetch(apiUrl('/api/notes'));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Notlar alınamadı.');
+        }
+
+        notesCache = await response.json();
+        renderNotes(notesCache);
+      } catch (error) {
+        notesArea.className = 'empty-state';
+        notesArea.innerHTML = escapeHtml(error.message);
+      }
+    }
+
+    async function saveRecord() {
+      const calculation = calculate();
+      const name = el.recordName.value.trim();
+      const barcode = el.recordBarcode.value.trim();
+
+      if (!name) {
+        alert('Ürün / kayıt adı yazmalısın.');
+        el.recordName.focus();
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Kaydediliyor...';
+
+      try {
+        const url = editingRecordId
+          ? `/api/records?id=${encodeURIComponent(editingRecordId)}`
+          : '/api/records';
+        const response = await fetch(apiUrl(url), {
+          method: editingRecordId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            barcode,
+            inputs: calculation.inputs
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Kayıt yapılamadı.');
+        }
+
+        el.recordName.value = '';
+        el.recordBarcode.value = '';
+        setEditingRecord(null);
+        await fetchRecords();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
+      }
+    }
+
+    async function deleteRecord(recordId) {
+      const record = recordsCache.find(item => item.id === recordId);
+      const recordName = record ? `"${record.name}"` : 'bu kayıt';
+
+      if (!confirm(`${recordName} silinsin mi?`)) return;
+
+      try {
+        const response = await fetch(apiUrl(`/api/records?id=${encodeURIComponent(recordId)}`), {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Kayıt silinemedi.');
+        }
+
+        if (editingRecordId === recordId) setEditingRecord(null);
+        await fetchRecords();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function importTrendyolRecords() {
+      if (!confirm('Trendyol ürünleri ortak kayıtlara aktarılsın mı? Var olan barkodların satış bilgisi güncellenir, geliş fiyatı korunur.')) return;
+
+      importTrendyolRecordsBtn.disabled = true;
+      importTrendyolRecordsBtn.textContent = 'Aktarılıyor...';
+      recordEditStatus.textContent = 'Trendyol ürünleri ortak kayıtlara aktarılıyor.';
+
+      try {
+        let created = 0;
+        let updated = 0;
+        let skipped = 0;
+        let startPage = 0;
+        let totalPages = 1;
+
+        do {
+          recordEditStatus.textContent = `Trendyol ürünleri aktarılıyor. Sayfa ${startPage + 1}/${totalPages}.`;
+          const response = await fetch(apiUrl(`/api/import-trendyol-records?size=50&maxPages=1&startPage=${startPage}`), {
+            method: 'POST'
+          });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Trendyol ürünleri aktarılamadı.');
+          }
+
+          const result = await response.json();
+          created += result.created || 0;
+          updated += result.updated || 0;
+          skipped += result.skipped || 0;
+          totalPages = result.totalPages || totalPages;
+          startPage = result.nextPage || totalPages;
+        } while (startPage < totalPages);
+
+        recordEditStatus.textContent = `${created} yeni kayıt, ${updated} güncelleme yapıldı. ${skipped} ürün atlandı.`;
+        await fetchRecords();
+        await fetchTrendyolStock();
+      } catch (error) {
+        recordEditStatus.textContent = 'Aktarım tamamlanamadı.';
+        alert(error.message);
+      } finally {
+        importTrendyolRecordsBtn.disabled = false;
+        importTrendyolRecordsBtn.textContent = 'Trendyol ürünlerini ortak kayıtlara aktar';
+      }
+    }
+
+    async function saveNote() {
+      const note = noteText.value.trim();
+
+      if (!note) {
+        alert('Not yazmalısın.');
+        noteText.focus();
+        return;
+      }
+
+      saveNoteBtn.disabled = true;
+      saveNoteBtn.textContent = 'Kaydediliyor...';
+
+      try {
+        const response = await fetch(apiUrl('/api/notes'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note })
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Not kaydedilemedi.');
+        }
+
+        noteText.value = '';
+        await fetchNotes();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        saveNoteBtn.disabled = false;
+        saveNoteBtn.textContent = 'Notu kaydet';
+      }
+    }
+
+    async function deleteNote(noteId) {
+      if (!confirm('Bu not silinsin mi?')) return;
+
+      try {
+        const response = await fetch(apiUrl(`/api/notes?id=${encodeURIComponent(noteId)}`), {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Not silinemedi.');
+        }
+
+        await fetchNotes();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    function loadRecord(record) {
+      el.recordName.value = record.name || '';
+      el.recordBarcode.value = record.barcode || '';
+      setEditingRecord(record);
+
+      Object.entries(record.inputs).forEach(([key, value]) => {
+        if (el[key]) el[key].value = value;
+      });
+
+      calculate();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      el.recordName.value = '';
+      el.recordBarcode.value = '';
+      el.salePrice.value = '1000';
+      el.purchasePrice.value = '500';
+      el.shippingFee.value = '80';
+      el.commissionRate.value = '19';
+      el.withholdingRate.value = '1';
+      el.vatRate.value = '1';
+      calculate();
+      setEditingRecord(null);
+    }
+
+    ids.forEach(id => {
+      el[id].addEventListener('input', calculate);
+      el[id].addEventListener('change', calculate);
+    });
+
+    eurAmount.addEventListener('input', () => calculateEuroTry('eur'));
+    tryAmount.addEventListener('input', () => calculateEuroTry('try'));
+    refreshRateBtn.addEventListener('click', fetchEuroRate);
+    refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
+    refreshMarketBtn.addEventListener('click', () => fetchTrendyolMarketIndex({ refresh: true }));
+    importTrendyolRecordsBtn.addEventListener('click', importTrendyolRecords);
+    recordSearch.addEventListener('input', () => renderRecords(recordsCache));
+    marketSearch.addEventListener('input', () => {
+      if (marketIndexCache) renderTrendyolMarketIndex(marketIndexCache);
+    });
+    cancelEditBtn.addEventListener('click', resetForm);
+    trendyolStockSearch.addEventListener('keydown', event => {
+      if (event.key === 'Enter') fetchTrendyolStock();
+    });
+    marketSearch.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && marketIndexCache) renderTrendyolMarketIndex(marketIndexCache);
+    });
+    stockTabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        activeStockTab = button.dataset.stockTab;
+        if (trendyolStockCache) {
+          renderTrendyolStock(trendyolStockCache);
+        } else {
+          updateStockTabs();
+        }
+      });
+    });
+    marketTabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        activeMarketTab = button.dataset.marketTab;
+        if (marketIndexCache) {
+          renderTrendyolMarketIndex(marketIndexCache);
+        } else {
+          updateMarketTabs();
+        }
+      });
+    });
+    calculateBtn.addEventListener('click', calculate);
+    saveBtn.addEventListener('click', saveRecord);
+    saveNoteBtn.addEventListener('click', saveNote);
+    resetBtn.addEventListener('click', resetForm);
+    refreshMarketBtn.textContent = getMarketActionLabel();
+    marketStatus.textContent = canRunLiveMarketRefresh
+      ? 'Public pazar indeksi manuel calisir. Taramayi butonla baslatabilirsin.'
+      : 'Canli sitede sadece cache okunur. Yeni veri icin lokal yenileyiciyi calistirip sonra "Cachei getir"e bas.';
+
+    recordsArea.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      const record = recordsCache.find(item => item.id === button.dataset.id);
+
+      if (button.dataset.action === 'load' && record) {
+        loadRecord(record);
+      }
+
+      if (button.dataset.action === 'delete') {
+        deleteRecord(button.dataset.id);
+      }
+    });
+
+    notesArea.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      if (button.dataset.action === 'delete-note') {
+        deleteNote(button.dataset.id);
+      }
+    });
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    loadCachedEuroRate();
+    fetchEuroRate();
+    setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
+    calculate();
+    fetchTrendyolStock();
+    fetchTrendyolMarketIndex();
+    fetchRecords();
+    fetchNotes();
+  </script>
+</body>
+</html>
