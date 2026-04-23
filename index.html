@@ -938,7 +938,7 @@
           <h2>Trendyol pazar indeksi</h2>
         </div>
         <div class="market-note">
-          Public Trendyol sayfalarindan taranan indeks. Buradaki satis skoru tahminidir; resmi Trendyol satis adedi degildir.
+          Public Trendyol sayfalarindan taranan indeks. Buradaki satis skoru tahminidir; resmi Trendyol satis adedi degildir. Vercel uzerinde canli tarama engellenirse cache'i bilgisayarinda `npm run refresh:market-cache` ile yenileyebilirsin.
         </div>
         <div class="stock-controls">
           <input id="marketSearch" type="text" placeholder="Urun, marka veya mense ara" />
@@ -995,6 +995,7 @@
     let currencySource = 'eur';
     const RATE_CACHE_KEY = 'eurTryRateCache';
     const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const canRunLiveMarketRefresh = isLocalHost || window.location.protocol === 'file:';
     const usesSeparateLocalServer = window.location.protocol === 'file:'
       || (isLocalHost && window.location.port && window.location.port !== '3000');
     const API_BASE = usesSeparateLocalServer ? 'http://localhost:3000' : '';
@@ -1048,6 +1049,10 @@
 
     function apiUrl(path) {
       return `${API_BASE}${path}`;
+    }
+
+    function getMarketActionLabel() {
+      return canRunLiveMarketRefresh ? 'Pazari tara' : 'Cachei getir';
     }
 
     function updateClock() {
@@ -1509,7 +1514,7 @@
     }
 
     async function fetchTrendyolMarketIndex(options = {}) {
-      const refresh = Boolean(options.refresh);
+      const refresh = Boolean(options.refresh) && canRunLiveMarketRefresh;
 
       refreshMarketBtn.disabled = true;
       refreshMarketBtn.textContent = refresh ? 'Taraniyor...' : 'Yukleniyor...';
@@ -1535,6 +1540,10 @@
           throw new Error('Bu deployda /api/trendyol-market-index endpointi yok. Vercel tarafinda yeniden deploy gerekiyor.');
         }
 
+        if (response.status === 403) {
+          throw new Error('Trendyol public taramayi Vercel uzerinden engelledi. Cache yenilemek icin bilgisayarinda `npm run refresh:market-cache` komutunu calistir.');
+        }
+
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw new Error(error.error || 'Public pazar indeksi alinamadi.');
@@ -1542,13 +1551,17 @@
 
         marketIndexCache = await response.json();
         renderTrendyolMarketIndex(marketIndexCache);
+
+        if (!canRunLiveMarketRefresh && !marketIndexCache?.meta?.indexedAt) {
+          marketStatus.textContent = 'Cache bos. Once bilgisayarinda npm run refresh:market-cache calistir, sonra bu sayfayi yenile veya "Cachei getir"e bas.';
+        }
       } catch (error) {
         marketStatus.textContent = 'Public indeks hazir degil.';
         marketArea.className = 'empty-state';
         marketArea.innerHTML = escapeHtml(error.message);
       } finally {
         refreshMarketBtn.disabled = false;
-        refreshMarketBtn.textContent = 'Pazari tara';
+        refreshMarketBtn.textContent = getMarketActionLabel();
       }
     }
 
@@ -1952,6 +1965,10 @@
     saveBtn.addEventListener('click', saveRecord);
     saveNoteBtn.addEventListener('click', saveNote);
     resetBtn.addEventListener('click', resetForm);
+    refreshMarketBtn.textContent = getMarketActionLabel();
+    marketStatus.textContent = canRunLiveMarketRefresh
+      ? 'Public pazar indeksi manuel calisir. Taramayi butonla baslatabilirsin.'
+      : 'Canli sitede sadece cache okunur. Yeni veri icin lokal yenileyiciyi calistirip sonra "Cachei getir"e bas.';
 
     recordsArea.addEventListener('click', event => {
       const button = event.target.closest('button[data-action]');
@@ -1984,6 +2001,7 @@
     setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
     calculate();
     fetchTrendyolStock();
+    fetchTrendyolMarketIndex();
     fetchRecords();
     fetchNotes();
   </script>
