@@ -552,6 +552,16 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === '/market-import.html') {
+      await sendFile(res, path.join(ROOT, 'market-import.html'), 'text/html; charset=utf-8');
+      return;
+    }
+
+    if (url.pathname === '/scripts/trendyol-browser-import.js') {
+      await sendFile(res, path.join(ROOT, 'scripts', 'trendyol-browser-import.js'), 'application/javascript; charset=utf-8');
+      return;
+    }
+
     if (url.pathname === '/favicon.ico') {
       sendNoContent(res);
       return;
