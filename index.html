@@ -945,7 +945,7 @@
           <button class="btn-secondary" id="refreshMarketBtn" type="button">Pazari tara</button>
         </div>
         <div class="stock-status" id="marketStatus">
-          Public pazar indeksi bekleniyor.
+          Public pazar indeksi manuel calisir. Taramayi butonla baslatabilirsin.
         </div>
         <div class="stock-tabs" aria-label="Pazar filtreleri">
           <button class="stock-tab active" type="button" data-market-tab="all">Tum indeks</button>
@@ -954,7 +954,7 @@
           <button class="stock-tab" type="button" data-market-tab="germany-top">Almanya + top</button>
         </div>
         <div id="marketArea" class="empty-state">
-          Pazar indeksi hazir oldugunda burada gorunecek.
+          Pazar taramasi bu deployda otomatik baslamaz. Hazir oldugunda burada gorunecek.
         </div>
       </div>
 
@@ -1984,7 +1984,6 @@
     setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
     calculate();
     fetchTrendyolStock();
-    fetchTrendyolMarketIndex();
     fetchRecords();
     fetchNotes();
   </script>
