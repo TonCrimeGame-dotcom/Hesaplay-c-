@@ -76,5 +76,11 @@ async function main() {
 main().catch(error => {
   console.error('Pazar cache yenileme basarisiz oldu.');
   console.error(error.message || error);
+  if (error.cause?.message) {
+    console.error(`Neden: ${error.cause.message}`);
+  }
+  if (error.stack) {
+    console.error(error.stack);
+  }
   process.exitCode = 1;
 });
