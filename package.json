@@ -1,7 +1,0 @@
-{
-  "name": "hesaplay-c",
-  "private": true,
-  "scripts": {
-    "refresh:market-cache": "node scripts/refresh-trendyol-market-cache.js"
-  }
-}
