@@ -529,6 +529,90 @@
       line-height: 1.45;
       overflow-wrap: anywhere;
     }
+    .market-section {
+      margin-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 24px;
+    }
+    .market-note {
+      margin-bottom: 12px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .market-mobile-list {
+      display: none;
+    }
+    .market-mobile-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+    .market-mobile-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .market-mobile-title {
+      margin: 0;
+      color: #111827;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .market-mobile-meta {
+      margin-top: 8px;
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .market-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .market-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .market-chip.origin-germany {
+      background: #ecfdf5;
+      color: #047857;
+    }
+    .market-chip.market-top {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+    .market-chip.market-muted {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+    .market-score {
+      font-weight: 800;
+      color: #111827;
+      white-space: nowrap;
+    }
+    .market-link {
+      color: #2563eb;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .market-link:hover {
+      text-decoration: underline;
+    }
+    .market-table .stock-product-name {
+      max-width: 320px;
+    }
     .notes-section {
       margin-top: 24px;
       border-top: 1px solid #e5e7eb;
@@ -656,6 +740,13 @@
         display: none;
       }
       .stock-mobile-list {
+        display: grid;
+        gap: 10px;
+      }
+      .market-table {
+        display: none;
+      }
+      .market-mobile-list {
         display: grid;
         gap: 10px;
       }
@@ -842,6 +933,31 @@
         </div>
       </div>
 
+      <div class="market-section">
+        <div class="saved-header">
+          <h2>Trendyol pazar indeksi</h2>
+        </div>
+        <div class="market-note">
+          Public Trendyol sayfalarÄ±ndan taranan indeks. Buradaki satÄ±ÅŸ skoru tahminidir; resmi Trendyol satÄ±ÅŸ adedi deÄŸildir.
+        </div>
+        <div class="stock-controls">
+          <input id="marketSearch" type="text" placeholder="ÃrÃ¼n, marka veya menÅe ara" />
+          <button class="btn-secondary" id="refreshMarketBtn" type="button">PazarÄ± tara</button>
+        </div>
+        <div class="stock-status" id="marketStatus">
+          Public pazar indeksi bekleniyor.
+        </div>
+        <div class="stock-tabs" aria-label="Pazar filtreleri">
+          <button class="stock-tab active" type="button" data-market-tab="all">TÃ¼m indeks</button>
+          <button class="stock-tab" type="button" data-market-tab="germany">Almanya menÅeli</button>
+          <button class="stock-tab" type="button" data-market-tab="top">En gÃ¼Ã§lÃ¼ satÄ±Å sinyali</button>
+          <button class="stock-tab" type="button" data-market-tab="germany-top">Almanya + top</button>
+        </div>
+        <div id="marketArea" class="empty-state">
+          Pazar indeksi hazÄ±r olduÄŸunda burada gÃ¶rÃ¼necek.
+        </div>
+      </div>
+
       <div class="notes-section">
         <div class="saved-header">
           <h2>Ortak notlar</h2>
@@ -872,6 +988,8 @@
     let notesCache = [];
     let trendyolStockCache = null;
     let activeStockTab = 'available';
+    let marketIndexCache = null;
+    let activeMarketTab = 'all';
     let editingRecordId = null;
     let eurTryRate = 0;
     let currencySource = 'eur';
@@ -916,6 +1034,11 @@
     const trendyolStockStatus = document.getElementById('trendyolStockStatus');
     const trendyolStockArea = document.getElementById('trendyolStockArea');
     const stockTabButtons = Array.from(document.querySelectorAll('[data-stock-tab]'));
+    const marketSearch = document.getElementById('marketSearch');
+    const refreshMarketBtn = document.getElementById('refreshMarketBtn');
+    const marketStatus = document.getElementById('marketStatus');
+    const marketArea = document.getElementById('marketArea');
+    const marketTabButtons = Array.from(document.querySelectorAll('[data-market-tab]'));
     const importTrendyolRecordsBtn = document.getElementById('importTrendyolRecordsBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const recordEditStatus = document.getElementById('recordEditStatus');
@@ -1257,6 +1380,172 @@
           }).join('')}
         </div>
       `;
+    }
+
+    function formatMarketScore(value) {
+      return new Intl.NumberFormat('tr-TR', {
+        maximumFractionDigits: 0
+      }).format(Number(value || 0));
+    }
+
+    function updateMarketTabs() {
+      marketTabButtons.forEach(button => {
+        button.classList.toggle('active', button.dataset.marketTab === activeMarketTab);
+      });
+    }
+
+    function getTopMarketScoreThreshold(items) {
+      if (!items.length) return Number.POSITIVE_INFINITY;
+
+      const sorted = [...items].sort((a, b) => (b.popularityScore || 0) - (a.popularityScore || 0));
+      const pivotIndex = Math.min(29, sorted.length - 1);
+      const pivotScore = Number(sorted[pivotIndex]?.popularityScore || 0);
+      return Math.max(300, pivotScore);
+    }
+
+    function getMarketTabItems(data) {
+      const allItems = Array.isArray(data?.items) ? data.items : [];
+      const germanyItems = allItems.filter(item => item.isGermanyOrigin);
+      const topThreshold = getTopMarketScoreThreshold(allItems);
+      const topItems = allItems.filter(item => (item.popularityScore || 0) >= topThreshold || item.popularityLabel);
+      const germanyTopItems = topItems.filter(item => item.isGermanyOrigin);
+
+      if (activeMarketTab === 'germany') return germanyItems;
+      if (activeMarketTab === 'top') return topItems;
+      if (activeMarketTab === 'germany-top') return germanyTopItems;
+      return allItems;
+    }
+
+    function renderTrendyolMarketIndex(data) {
+      const allItems = Array.isArray(data?.items) ? data.items : [];
+      const germanyItems = allItems.filter(item => item.isGermanyOrigin);
+      const topThreshold = getTopMarketScoreThreshold(allItems);
+      const topItems = allItems.filter(item => (item.popularityScore || 0) >= topThreshold || item.popularityLabel);
+      const items = getMarketTabItems(data);
+      const query = normalizeSearchText(marketSearch.value.trim());
+      const filteredItems = query
+        ? items.filter(item => {
+          const searchable = normalizeSearchText(`
+            ${item.title || ''}
+            ${item.brand || ''}
+            ${item.seller || ''}
+            ${item.originLabel || ''}
+            ${item.popularityLabel || ''}
+            ${(item.searchTerms || []).join(' ')}
+          `);
+          return searchable.includes(query);
+        })
+        : items;
+
+      updateMarketTabs();
+      marketStatus.textContent = `Public indeks. Gosterilen: ${filteredItems.length}. Toplam: ${allItems.length}. Almanya: ${germanyItems.length}. Guclu sinyal: ${topItems.length}. Son tarama: ${formatDate(data?.meta?.indexedAt)}.`;
+
+      if (!allItems.length) {
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = 'Henuz public pazar indeksi yok. Ilk tarama icin "Pazari tara" butonunu kullan.';
+        return;
+      }
+
+      if (!filteredItems.length) {
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = 'Bu filtrede urun bulunamadi.';
+        return;
+      }
+
+      marketArea.className = 'records-table-wrap';
+      marketArea.innerHTML = `
+        <table class="stock-table market-table">
+          <thead>
+            <tr>
+              <th>Urun</th>
+              <th>Mensei</th>
+              <th>Satis skoru</th>
+              <th>Populerlik</th>
+              <th>Fiyat</th>
+              <th>Puan / yorum</th>
+              <th>Satici</th>
+              <th>Baglanti</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredItems.map(item => `
+              <tr>
+                <td class="stock-product-name">${escapeHtml(item.title || '-')}<br><span style="color:#6b7280;">${escapeHtml(item.brand || '-')}</span></td>
+                <td>${item.isGermanyOrigin ? '<span class="market-chip origin-germany">Almanya</span>' : escapeHtml(item.originLabel || '-')}</td>
+                <td><span class="market-score">${formatMarketScore(item.popularityScore)}</span></td>
+                <td>${item.popularityLabel ? `<span class="market-chip market-top">${escapeHtml(item.popularityLabel)}${item.popularityRank ? ` #${item.popularityRank}` : ''}</span>` : '<span class="market-chip market-muted">Heuristik</span>'}</td>
+                <td>${item.price ? tl(item.price) : '-'}</td>
+                <td>${item.rating ? `${item.rating.toFixed(1)} / ${new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}` : new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}</td>
+                <td>${escapeHtml(item.seller || '-')}</td>
+                <td><a class="market-link" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer">Ac</a></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="market-mobile-list">
+          ${filteredItems.map(item => `
+            <div class="market-mobile-card">
+              <div class="market-mobile-head">
+                <p class="market-mobile-title">${escapeHtml(item.title || '-')}</p>
+                <div class="market-score">${formatMarketScore(item.popularityScore)}</div>
+              </div>
+              <div class="market-mobile-meta">
+                Marka: ${escapeHtml(item.brand || '-')}<br>
+                Satici: ${escapeHtml(item.seller || '-')}<br>
+                Fiyat: ${item.price ? tl(item.price) : '-'}<br>
+                Puan / Yorum: ${item.rating ? `${item.rating.toFixed(1)} / ${new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}` : new Intl.NumberFormat('tr-TR').format(item.reviewCount || 0)}
+              </div>
+              <div class="market-badge-row">
+                ${item.isGermanyOrigin ? '<span class="market-chip origin-germany">Almanya</span>' : `<span class="market-chip market-muted">${escapeHtml(item.originLabel || 'Menşei yok')}</span>`}
+                ${item.popularityLabel ? `<span class="market-chip market-top">${escapeHtml(item.popularityLabel)}${item.popularityRank ? ` #${item.popularityRank}` : ''}</span>` : '<span class="market-chip market-muted">Heuristik skor</span>'}
+              </div>
+              <div class="market-badge-row">
+                <a class="market-link" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer">Trendyol urun sayfasini ac</a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function fetchTrendyolMarketIndex(options = {}) {
+      const refresh = Boolean(options.refresh);
+
+      refreshMarketBtn.disabled = true;
+      refreshMarketBtn.textContent = refresh ? 'Taraniyor...' : 'Yukleniyor...';
+      marketStatus.textContent = refresh
+        ? 'Public Trendyol pazari taraniyor. Bu islem biraz surebilir.'
+        : 'Public pazar indeksi yukleniyor.';
+
+      if (!marketIndexCache || refresh) {
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = refresh
+          ? 'Public pazar taramasi suruyor.'
+          : 'Public pazar indeksi yukleniyor.';
+      }
+
+      try {
+        const response = await fetch(apiUrl('/api/trendyol-market-index'), {
+          method: refresh ? 'POST' : 'GET',
+          headers: refresh ? { 'Content-Type': 'application/json' } : undefined,
+          body: refresh ? JSON.stringify({ pageLimit: 2, detailLimit: 60 }) : undefined
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'Public pazar indeksi alinamadi.');
+        }
+
+        marketIndexCache = await response.json();
+        renderTrendyolMarketIndex(marketIndexCache);
+      } catch (error) {
+        marketStatus.textContent = 'Public indeks hazir degil.';
+        marketArea.className = 'empty-state';
+        marketArea.innerHTML = escapeHtml(error.message);
+      } finally {
+        refreshMarketBtn.disabled = false;
+        refreshMarketBtn.textContent = 'Pazari tara';
+      }
     }
 
     async function fetchTrendyolStock() {
@@ -1622,11 +1911,18 @@
     tryAmount.addEventListener('input', () => calculateEuroTry('try'));
     refreshRateBtn.addEventListener('click', fetchEuroRate);
     refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
+    refreshMarketBtn.addEventListener('click', () => fetchTrendyolMarketIndex({ refresh: true }));
     importTrendyolRecordsBtn.addEventListener('click', importTrendyolRecords);
     recordSearch.addEventListener('input', () => renderRecords(recordsCache));
+    marketSearch.addEventListener('input', () => {
+      if (marketIndexCache) renderTrendyolMarketIndex(marketIndexCache);
+    });
     cancelEditBtn.addEventListener('click', resetForm);
     trendyolStockSearch.addEventListener('keydown', event => {
       if (event.key === 'Enter') fetchTrendyolStock();
+    });
+    marketSearch.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && marketIndexCache) renderTrendyolMarketIndex(marketIndexCache);
     });
     stockTabButtons.forEach(button => {
       button.addEventListener('click', () => {
@@ -1635,6 +1931,16 @@
           renderTrendyolStock(trendyolStockCache);
         } else {
           updateStockTabs();
+        }
+      });
+    });
+    marketTabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        activeMarketTab = button.dataset.marketTab;
+        if (marketIndexCache) {
+          renderTrendyolMarketIndex(marketIndexCache);
+        } else {
+          updateMarketTabs();
         }
       });
     });
@@ -1674,6 +1980,7 @@
     setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
     calculate();
     fetchTrendyolStock();
+    fetchTrendyolMarketIndex();
     fetchRecords();
     fetchNotes();
   </script>
