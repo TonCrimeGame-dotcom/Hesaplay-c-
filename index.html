@@ -938,23 +938,23 @@
           <h2>Trendyol pazar indeksi</h2>
         </div>
         <div class="market-note">
-          Public Trendyol sayfalarÄ±ndan taranan indeks. Buradaki satÄ±ÅŸ skoru tahminidir; resmi Trendyol satÄ±ÅŸ adedi deÄŸildir.
+          Public Trendyol sayfalarindan taranan indeks. Buradaki satis skoru tahminidir; resmi Trendyol satis adedi degildir.
         </div>
         <div class="stock-controls">
-          <input id="marketSearch" type="text" placeholder="ÃrÃ¼n, marka veya menÅe ara" />
-          <button class="btn-secondary" id="refreshMarketBtn" type="button">PazarÄ± tara</button>
+          <input id="marketSearch" type="text" placeholder="Urun, marka veya mense ara" />
+          <button class="btn-secondary" id="refreshMarketBtn" type="button">Pazari tara</button>
         </div>
         <div class="stock-status" id="marketStatus">
           Public pazar indeksi bekleniyor.
         </div>
         <div class="stock-tabs" aria-label="Pazar filtreleri">
-          <button class="stock-tab active" type="button" data-market-tab="all">TÃ¼m indeks</button>
-          <button class="stock-tab" type="button" data-market-tab="germany">Almanya menÅeli</button>
-          <button class="stock-tab" type="button" data-market-tab="top">En gÃ¼Ã§lÃ¼ satÄ±Å sinyali</button>
+          <button class="stock-tab active" type="button" data-market-tab="all">Tum indeks</button>
+          <button class="stock-tab" type="button" data-market-tab="germany">Almanya menseili</button>
+          <button class="stock-tab" type="button" data-market-tab="top">En guclu satis sinyali</button>
           <button class="stock-tab" type="button" data-market-tab="germany-top">Almanya + top</button>
         </div>
         <div id="marketArea" class="empty-state">
-          Pazar indeksi hazÄ±r olduÄŸunda burada gÃ¶rÃ¼necek.
+          Pazar indeksi hazir oldugunda burada gorunecek.
         </div>
       </div>
 
@@ -1530,6 +1530,10 @@
           headers: refresh ? { 'Content-Type': 'application/json' } : undefined,
           body: refresh ? JSON.stringify({ pageLimit: 2, detailLimit: 60 }) : undefined
         });
+
+        if (response.status === 404) {
+          throw new Error('Bu deployda /api/trendyol-market-index endpointi yok. Vercel tarafinda yeniden deploy gerekiyor.');
+        }
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
