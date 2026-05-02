@@ -28,7 +28,7 @@
     }
     .site-topbar {
       display: grid;
-      grid-template-columns: 220px minmax(280px, 360px) 1fr;
+      grid-template-columns: minmax(290px, 320px) minmax(240px, 1fr) auto;
       align-items: center;
       gap: 16px;
       margin-bottom: 18px;
@@ -36,11 +36,29 @@
     .brand-area {
       display: flex;
       align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     .brand-logo {
       display: block;
-      width: min(190px, 48vw);
+      width: min(150px, 38vw);
       height: auto;
+    }
+    .brand-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .brand-tab {
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #e0f2fe;
+      color: #0f172a;
+      font-size: 13px;
+    }
+    .brand-tab.active {
+      background: #0f172a;
+      color: #fff;
     }
     .topbar-center {
       justify-self: center;
@@ -253,6 +271,9 @@
     .btn-danger {
       background: #fee2e2;
       color: #991b1b;
+    }
+    .view-panel[hidden] {
+      display: none !important;
     }
     .saved-section {
       margin-top: 24px;
@@ -664,6 +685,23 @@
       padding: 14px;
       border-radius: 12px;
     }
+    .expense-save-meta {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #ecfeff;
+      border: 1px solid #a5f3fc;
+      color: #155e75;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .expense-breakdown {
+      margin-top: 10px;
+      color: #4b5563;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
     @media (max-width: 560px) {
       .grid, .results { grid-template-columns: 1fr; }
       .site-topbar {
@@ -690,6 +728,13 @@
       }
       .brand-logo {
         width: min(210px, 56vw);
+      }
+      .brand-nav {
+        width: 100%;
+      }
+      .brand-tab {
+        flex: 1 1 120px;
+        text-align: center;
       }
       .date-time-box {
         text-align: right;
@@ -756,10 +801,13 @@
     }
     @media (min-width: 561px) and (max-width: 980px) {
       .site-topbar {
-        grid-template-columns: 190px 1fr;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .brand-area {
+        grid-column: 1 / -1;
       }
       .topbar-right {
-        grid-column: 1 / -1;
+        grid-column: 2;
         justify-self: end;
       }
     }
@@ -771,6 +819,10 @@
       <div class="site-topbar">
         <div class="brand-area">
           <img class="brand-logo" src="assets/logo-cropped.png" alt="Toptan A.Ş." />
+          <div class="brand-nav" aria-label="Ekran sekmeleri">
+            <button class="brand-tab active" id="profitViewBtn" type="button" data-view-button="profit">KÂR</button>
+            <button class="brand-tab" id="expenseViewBtn" type="button" data-view-button="expense">GİRDİ</button>
+          </div>
         </div>
         <div class="topbar-center">
           <div class="euro-tool" aria-label="Euro TL hesaplayıcı">
@@ -815,6 +867,103 @@
         <span class="signature-name">Yağız</span>
       </p>
 
+      <div class="view-panel" data-view-panel="expense" hidden>
+        <div class="saved-header">
+          <h2>GİRDİ Hesabı</h2>
+        </div>
+        <div class="market-note">
+          Tum alisveris masraflarini buraya gir. Sistem toplam gideri ve adet basi maliyeti otomatik hesaplar; kayit aninda tarih, saat ve o anki EUR/TRY kuru da kayda eklenir.
+        </div>
+
+        <div class="grid">
+          <div class="field">
+            <label for="fuelCost">Mazot (TL)</label>
+            <input id="fuelCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="carRentalCost">Arac Kiralama (TL)</label>
+            <input id="carRentalCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="driverCost">Sofor (TL)</label>
+            <input id="driverCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="accommodationCost">Konaklama (TL)</label>
+            <input id="accommodationCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="foodCost">Yeme - Icme (TL)</label>
+            <input id="foodCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="flightCost">Ucak Masrafi (TL)</label>
+            <input id="flightCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="productCost">Alinan Urun Fiyati (TL)</label>
+            <input id="productCost" type="number" min="0" step="0.01" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="productQuantity">Alinan Urun Adedi</label>
+            <input id="productQuantity" type="number" min="1" step="1" value="1" />
+          </div>
+        </div>
+
+        <div class="results">
+          <div class="result-box">
+            <div class="result-title">Operasyon Gideri</div>
+            <div class="result-value" id="expenseOperatingResult">₺0,00</div>
+          </div>
+
+          <div class="result-box">
+            <div class="result-title">Toplam Girdi</div>
+            <div class="result-value" id="expenseTotalResult">₺0,00</div>
+          </div>
+
+          <div class="result-box">
+            <div class="result-title">Adet Basi Maliyet</div>
+            <div class="result-value" id="expenseUnitCostResult">₺0,00</div>
+          </div>
+
+          <div class="result-box">
+            <div class="result-title">Urun Adedi</div>
+            <div class="result-value" id="expenseQuantityResult">1</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="calculateExpenseBtn" type="button">Girdiyi Hesapla</button>
+          <button class="btn-secondary" id="saveExpenseBtn" type="button">Kaydet</button>
+          <button class="btn-secondary" id="resetExpenseBtn" type="button">Sıfırla</button>
+        </div>
+
+        <div class="formula" id="expenseFormulaText">
+          Formul: (Mazot + Arac Kiralama + Sofor + Konaklama + Yeme - Icme + Ucak + Urun Fiyati) / Urun Adedi
+        </div>
+
+        <div class="expense-save-meta" id="expenseSaveMeta">
+          Kaydet'e bastiginda tarih, saat ve kayit anindaki EUR/TRY kuru burada da gorunecek.
+        </div>
+
+        <div class="saved-section">
+          <div class="saved-header">
+            <h2>GİRDİ Kayıtları</h2>
+          </div>
+          <div id="expenseRecordsArea" class="empty-state">
+            GİRDİ kayıtları yukleniyor.
+          </div>
+        </div>
+      </div>
+
+      <div class="view-panel" data-view-panel="profit">
       <div class="grid">
         <div class="field">
           <label for="recordName">Ürün / kayıt adı</label>
@@ -981,18 +1130,22 @@
         Not: Bu sürüm pratik kullanım için hazırlanmıştır. E-stopaj alanı varsayılan olarak %1 gelir.
         İstersen sonraki adımda buna reklam gideri, paketleme, KDV, iade zararı ve farklı pazaryeri komisyonlarını da ekleyebilirim.
       </div>
+      </div>
     </div>
   </div>
 
   <script>
     let recordsCache = [];
+    let expenseRecordsCache = [];
     let notesCache = [];
     let trendyolStockCache = null;
     let activeStockTab = 'available';
     let marketIndexCache = null;
     let activeMarketTab = 'all';
+    let activeView = 'profit';
     let editingRecordId = null;
     let eurTryRate = 0;
+    let eurTryRateDate = '';
     let currencySource = 'eur';
     const RATE_CACHE_KEY = 'eurTryRateCache';
     const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -1008,11 +1161,24 @@
       'withholdingRate',
       'vatRate'
     ];
+    const expenseIds = [
+      'fuelCost',
+      'carRentalCost',
+      'driverCost',
+      'accommodationCost',
+      'foodCost',
+      'flightCost',
+      'productCost',
+      'productQuantity'
+    ];
 
     const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    const expenseEl = Object.fromEntries(expenseIds.map(id => [id, document.getElementById(id)]));
     el.recordName = document.getElementById('recordName');
     el.recordBarcode = document.getElementById('recordBarcode');
 
+    const viewButtons = Array.from(document.querySelectorAll('[data-view-button]'));
+    const viewPanels = Array.from(document.querySelectorAll('[data-view-panel]'));
     const netSaleResult = document.getElementById('netSaleResult');
     const commissionResult = document.getElementById('commissionResult');
     const withholdingResult = document.getElementById('withholdingResult');
@@ -1048,6 +1214,16 @@
     const noteText = document.getElementById('noteText');
     const saveNoteBtn = document.getElementById('saveNoteBtn');
     const notesArea = document.getElementById('notesArea');
+    const expenseOperatingResult = document.getElementById('expenseOperatingResult');
+    const expenseTotalResult = document.getElementById('expenseTotalResult');
+    const expenseUnitCostResult = document.getElementById('expenseUnitCostResult');
+    const expenseQuantityResult = document.getElementById('expenseQuantityResult');
+    const expenseFormulaText = document.getElementById('expenseFormulaText');
+    const calculateExpenseBtn = document.getElementById('calculateExpenseBtn');
+    const saveExpenseBtn = document.getElementById('saveExpenseBtn');
+    const resetExpenseBtn = document.getElementById('resetExpenseBtn');
+    const expenseSaveMeta = document.getElementById('expenseSaveMeta');
+    const expenseRecordsArea = document.getElementById('expenseRecordsArea');
 
     function apiUrl(path) {
       return `${API_BASE}${path}`;
@@ -1059,6 +1235,28 @@
 
     function getMarketImportPageUrl() {
       return apiUrl('/market-import.html');
+    }
+
+    function setActiveView(view, options = {}) {
+      activeView = view === 'expense' ? 'expense' : 'profit';
+
+      viewButtons.forEach(button => {
+        button.classList.toggle('active', button.dataset.viewButton === activeView);
+      });
+
+      viewPanels.forEach(panel => {
+        panel.hidden = panel.dataset.viewPanel !== activeView;
+      });
+
+      if (activeView === 'expense') {
+        calculateExpense();
+      } else {
+        calculate();
+      }
+
+      if (options.scroll) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
 
     function updateClock() {
@@ -1103,8 +1301,16 @@
       return String(Math.round(v * 100) / 100);
     }
 
+    function formatQuantity(value) {
+      return new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(Number(value || 0));
+    }
+
     function setEuroRate(rate, date, sourceText) {
       eurTryRate = Number(rate) || 0;
+      eurTryRateDate = date || '';
 
       if (!eurTryRate) {
         eurTryResult.textContent = 'Kur bekleniyor.';
@@ -1159,13 +1365,23 @@
           storedAt: new Date().toISOString()
         }));
         setEuroRate(data.rate, data.date, 'Güncel kur');
+        return {
+          rate: Number(data.rate),
+          date: data.date
+        };
       } catch (error) {
         if (!eurTryRate) {
           eurRateStatus.textContent = 'Kur otomatik alınamadı.';
           eurTryResult.textContent = 'Kur alınamadı.';
         } else {
           eurRateStatus.textContent = 'Kur yenilenemedi, son alınan kur kullanılıyor.';
+          return {
+            rate: eurTryRate,
+            date: eurTryRateDate
+          };
         }
+
+        return null;
       } finally {
         refreshRateBtn.disabled = false;
       }
@@ -1179,6 +1395,23 @@
       } catch (error) {
         localStorage.removeItem(RATE_CACHE_KEY);
       }
+    }
+
+    async function ensureEuroRate() {
+      if (eurTryRate) {
+        return {
+          rate: eurTryRate,
+          date: eurTryRateDate || new Date().toISOString().slice(0, 10)
+        };
+      }
+
+      const currentRate = await fetchEuroRate();
+
+      if (!currentRate?.rate) {
+        throw new Error('Guncel kur alinamadi. Lutfen tekrar dene.');
+      }
+
+      return currentRate;
     }
 
     function percent(v) {
@@ -1242,6 +1475,72 @@
         Formül: <strong>${tl(salePrice)}</strong> - <strong>${tl(purchasePrice)}</strong> - <strong>${tl(shippingFee)}</strong>
         - <strong>${tl(commissionFee)}</strong> - <strong>${tl(withholdingFee)}</strong> =
         <strong>${tl(profit)}</strong>
+      `;
+
+      return calculation;
+    }
+
+    function getExpenseCalculation() {
+      const fuelCost = num(expenseEl.fuelCost.value);
+      const carRentalCost = num(expenseEl.carRentalCost.value);
+      const driverCost = num(expenseEl.driverCost.value);
+      const accommodationCost = num(expenseEl.accommodationCost.value);
+      const foodCost = num(expenseEl.foodCost.value);
+      const flightCost = num(expenseEl.flightCost.value);
+      const productCost = num(expenseEl.productCost.value);
+      const productQuantity = num(expenseEl.productQuantity.value);
+
+      const operatingCost =
+        fuelCost
+        + carRentalCost
+        + driverCost
+        + accommodationCost
+        + foodCost
+        + flightCost;
+      const totalCost = operatingCost + productCost;
+      const unitCost = productQuantity > 0 ? totalCost / productQuantity : 0;
+
+      return {
+        inputs: {
+          fuelCost,
+          carRentalCost,
+          driverCost,
+          accommodationCost,
+          foodCost,
+          flightCost,
+          productCost,
+          productQuantity
+        },
+        results: {
+          operatingCost,
+          totalCost,
+          unitCost
+        }
+      };
+    }
+
+    function calculateExpense() {
+      const calculation = getExpenseCalculation();
+      const {
+        fuelCost,
+        carRentalCost,
+        driverCost,
+        accommodationCost,
+        foodCost,
+        flightCost,
+        productCost,
+        productQuantity
+      } = calculation.inputs;
+      const { operatingCost, totalCost, unitCost } = calculation.results;
+
+      expenseOperatingResult.textContent = tl(operatingCost);
+      expenseTotalResult.textContent = tl(totalCost);
+      expenseUnitCostResult.textContent = productQuantity > 0 ? tl(unitCost) : 'Adet gir';
+      expenseQuantityResult.textContent = formatQuantity(productQuantity);
+      expenseFormulaText.innerHTML = `
+        Formul: (<strong>${tl(fuelCost)}</strong> + <strong>${tl(carRentalCost)}</strong> + <strong>${tl(driverCost)}</strong>
+        + <strong>${tl(accommodationCost)}</strong> + <strong>${tl(foodCost)}</strong> + <strong>${tl(flightCost)}</strong>
+        + <strong>${tl(productCost)}</strong>) / <strong>${formatQuantity(productQuantity)}</strong> = <strong>${tl(unitCost)}</strong>
       `;
 
       return calculation;
@@ -1701,6 +2000,98 @@
       `).join('');
     }
 
+    function formatExchangeRate(record) {
+      const baseCurrency = record?.exchangeRate?.baseCurrency || 'EUR';
+      const quoteCurrency = record?.exchangeRate?.quoteCurrency || 'TRY';
+      const rate = Number(record?.exchangeRate?.rate || 0);
+
+      if (!rate) {
+        return `${baseCurrency}/${quoteCurrency} kur bilgisi yok`;
+      }
+
+      return `1 ${baseCurrency} = ${tl(rate)}`;
+    }
+
+    function updateExpenseSaveMeta(record) {
+      if (!record) {
+        expenseSaveMeta.textContent = "Kaydet'e bastiginda tarih, saat ve kayit anindaki EUR/TRY kuru burada da gorunecek.";
+        return;
+      }
+
+      const rateDate = record.exchangeRate?.date ? ` | Kur tarihi: ${escapeHtml(record.exchangeRate.date)}` : '';
+      expenseSaveMeta.textContent = `Son kayit: ${formatDate(record.createdAt)} | ${formatExchangeRate(record)}${rateDate}`;
+    }
+
+    function renderExpenseRecords(records) {
+      if (!records.length) {
+        expenseRecordsArea.className = 'empty-state';
+        expenseRecordsArea.innerHTML = 'Henüz GİRDİ kaydı yok. İlk alışverişini kaydettiğinde burada göreceksin.';
+        updateExpenseSaveMeta(null);
+        return;
+      }
+
+      const sortedRecords = [...records].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      expenseRecordsArea.className = 'record-card-scroll';
+      expenseRecordsArea.innerHTML = sortedRecords.map(record => `
+        <article class="record-card">
+          <div class="record-card-thumb">₺</div>
+          <div class="record-card-body">
+            <p class="record-card-title">GİRDİ kaydı</p>
+            <div class="record-card-meta">
+              Kaydedildi: ${formatDate(record.createdAt)} | ${escapeHtml(formatExchangeRate(record))} | Kur tarihi: ${escapeHtml(record.exchangeRate?.date || '-')}
+            </div>
+            <div class="record-card-stats">
+              <div class="record-card-stat">
+                <span>Toplam Girdi</span>
+                <strong>${tl(record.results.totalCost)}</strong>
+              </div>
+              <div class="record-card-stat">
+                <span>Adet Basi</span>
+                <strong>${tl(record.results.unitCost)}</strong>
+              </div>
+              <div class="record-card-stat">
+                <span>Urun Adedi</span>
+                <strong>${formatQuantity(record.inputs.productQuantity)}</strong>
+              </div>
+              <div class="record-card-stat">
+                <span>Operasyon</span>
+                <strong>${tl(record.results.operatingCost)}</strong>
+              </div>
+            </div>
+            <div class="expense-breakdown">
+              Mazot ${tl(record.inputs.fuelCost)} · Arac ${tl(record.inputs.carRentalCost)} · Sofor ${tl(record.inputs.driverCost)} ·
+              Konaklama ${tl(record.inputs.accommodationCost)} · Yeme-Icme ${tl(record.inputs.foodCost)} · Ucak ${tl(record.inputs.flightCost)} ·
+              Urun ${tl(record.inputs.productCost)}
+            </div>
+          </div>
+        </article>
+      `).join('');
+
+      updateExpenseSaveMeta(sortedRecords[0]);
+    }
+
+    async function fetchExpenseRecords() {
+      expenseRecordsArea.className = 'empty-state';
+      expenseRecordsArea.innerHTML = 'GİRDİ kayıtları yukleniyor.';
+
+      try {
+        const response = await fetch(apiUrl('/api/expense-records'));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'GİRDİ kayıtları alınamadı.');
+        }
+
+        expenseRecordsCache = await response.json();
+        renderExpenseRecords(expenseRecordsCache);
+      } catch (error) {
+        expenseRecordsArea.className = 'empty-state';
+        expenseRecordsArea.innerHTML = escapeHtml(error.message);
+        updateExpenseSaveMeta(null);
+      }
+    }
+
     async function fetchRecords() {
       recordsArea.className = 'empty-state';
       recordsArea.innerHTML = 'Ortak kayıtlar yükleniyor.';
@@ -1784,6 +2175,51 @@
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
+      }
+    }
+
+    async function saveExpenseRecord() {
+      const calculation = calculateExpense();
+
+      if (calculation.inputs.productQuantity <= 0) {
+        alert('Alinan urun adedi 0dan buyuk olmali.');
+        expenseEl.productQuantity.focus();
+        return;
+      }
+
+      saveExpenseBtn.disabled = true;
+      saveExpenseBtn.textContent = 'Kaydediliyor...';
+
+      try {
+        const rateInfo = await ensureEuroRate();
+        const response = await fetch(apiUrl('/api/expense-records'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inputs: calculation.inputs,
+            exchangeRate: {
+              baseCurrency: 'EUR',
+              quoteCurrency: 'TRY',
+              rate: rateInfo.rate,
+              date: rateInfo.date,
+              source: 'Guncel kur'
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'GİRDİ kaydı yapılamadı.');
+        }
+
+        const savedRecord = await response.json();
+        updateExpenseSaveMeta(savedRecord);
+        await fetchExpenseRecords();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        saveExpenseBtn.disabled = false;
+        saveExpenseBtn.textContent = 'Kaydet';
       }
     }
 
@@ -1934,14 +2370,33 @@
       setEditingRecord(null);
     }
 
+    function resetExpenseForm() {
+      expenseEl.fuelCost.value = '0';
+      expenseEl.carRentalCost.value = '0';
+      expenseEl.driverCost.value = '0';
+      expenseEl.accommodationCost.value = '0';
+      expenseEl.foodCost.value = '0';
+      expenseEl.flightCost.value = '0';
+      expenseEl.productCost.value = '0';
+      expenseEl.productQuantity.value = '1';
+      calculateExpense();
+    }
+
     ids.forEach(id => {
       el[id].addEventListener('input', calculate);
       el[id].addEventListener('change', calculate);
+    });
+    expenseIds.forEach(id => {
+      expenseEl[id].addEventListener('input', calculateExpense);
+      expenseEl[id].addEventListener('change', calculateExpense);
     });
 
     eurAmount.addEventListener('input', () => calculateEuroTry('eur'));
     tryAmount.addEventListener('input', () => calculateEuroTry('try'));
     refreshRateBtn.addEventListener('click', fetchEuroRate);
+    viewButtons.forEach(button => {
+      button.addEventListener('click', () => setActiveView(button.dataset.viewButton, { scroll: true }));
+    });
     refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
     refreshMarketBtn.addEventListener('click', () => fetchTrendyolMarketIndex({ refresh: true }));
     openMarketImportPageBtn.addEventListener('click', () => {
@@ -1981,6 +2436,9 @@
     });
     calculateBtn.addEventListener('click', calculate);
     saveBtn.addEventListener('click', saveRecord);
+    calculateExpenseBtn.addEventListener('click', calculateExpense);
+    saveExpenseBtn.addEventListener('click', saveExpenseRecord);
+    resetExpenseBtn.addEventListener('click', resetExpenseForm);
     saveNoteBtn.addEventListener('click', saveNote);
     resetBtn.addEventListener('click', resetForm);
     refreshMarketBtn.textContent = getMarketActionLabel();
@@ -2018,9 +2476,12 @@
     fetchEuroRate();
     setInterval(fetchEuroRate, 6 * 60 * 60 * 1000);
     calculate();
+    calculateExpense();
+    setActiveView(activeView);
     fetchTrendyolStock();
     fetchTrendyolMarketIndex();
     fetchRecords();
+    fetchExpenseRecords();
     fetchNotes();
   </script>
 </body>
