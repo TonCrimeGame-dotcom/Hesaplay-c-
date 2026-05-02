@@ -8,6 +8,9 @@ const {
   mergeMarketPayloads,
   refreshPublicMarketIndex
 } = require('./lib/trendyol-market');
+const {
+  runTrendyolCategoryImport
+} = require('./scripts/trendyol-playwright-import');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
@@ -17,6 +20,9 @@ const DATA_FILE = process.env.DATA_FILE
 const NOTES_FILE = process.env.NOTES_FILE
   ? path.resolve(process.env.NOTES_FILE)
   : path.join(ROOT, 'data', 'notes.json');
+const EXPENSE_DATA_FILE = process.env.EXPENSE_DATA_FILE
+  ? path.resolve(process.env.EXPENSE_DATA_FILE)
+  : path.join(ROOT, 'data', 'expense-records.json');
 const MARKET_INDEX_FILE = process.env.MARKET_INDEX_FILE
   ? path.resolve(process.env.MARKET_INDEX_FILE)
   : path.join(ROOT, 'data', 'trendyol-market-index.json');
@@ -65,6 +71,10 @@ function normalizeChoice(value, allowed, fallback) {
   return allowed.includes(value) ? value : fallback;
 }
 
+function cleanText(value, maxLength) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
 function calculate(rawInputs = {}) {
   const salePrice = num(rawInputs.salePrice);
   const purchasePrice = num(rawInputs.purchasePrice);
@@ -104,6 +114,55 @@ function calculate(rawInputs = {}) {
   };
 }
 
+function calculateExpense(rawInputs = {}) {
+  const fuelCost = num(rawInputs.fuelCost);
+  const carRentalCost = num(rawInputs.carRentalCost);
+  const driverCost = num(rawInputs.driverCost);
+  const accommodationCost = num(rawInputs.accommodationCost);
+  const foodCost = num(rawInputs.foodCost);
+  const flightCost = num(rawInputs.flightCost);
+  const productCost = num(rawInputs.productCost);
+  const productQuantity = num(rawInputs.productQuantity);
+
+  const operatingCost =
+    fuelCost
+    + carRentalCost
+    + driverCost
+    + accommodationCost
+    + foodCost
+    + flightCost;
+  const totalCost = operatingCost + productCost;
+  const unitCost = productQuantity > 0 ? totalCost / productQuantity : 0;
+
+  return {
+    inputs: {
+      fuelCost,
+      carRentalCost,
+      driverCost,
+      accommodationCost,
+      foodCost,
+      flightCost,
+      productCost,
+      productQuantity
+    },
+    results: {
+      operatingCost,
+      totalCost,
+      unitCost
+    }
+  };
+}
+
+function normalizeExpenseExchangeRate(rawExchangeRate = {}) {
+  return {
+    baseCurrency: cleanText(rawExchangeRate.baseCurrency, 10) || 'EUR',
+    quoteCurrency: cleanText(rawExchangeRate.quoteCurrency, 10) || 'TRY',
+    rate: num(rawExchangeRate.rate),
+    date: cleanText(rawExchangeRate.date, 40),
+    source: cleanText(rawExchangeRate.source, 80) || 'Guncel kur'
+  };
+}
+
 async function readRecords() {
   try {
     const content = await fs.readFile(DATA_FILE, 'utf8');
@@ -134,6 +193,22 @@ async function readNotes() {
 async function writeNotes(notes) {
   await fs.mkdir(path.dirname(NOTES_FILE), { recursive: true });
   await fs.writeFile(NOTES_FILE, JSON.stringify(notes, null, 2), 'utf8');
+}
+
+async function readExpenseRecords() {
+  try {
+    const content = await fs.readFile(EXPENSE_DATA_FILE, 'utf8');
+    const records = JSON.parse(content);
+    return Array.isArray(records) ? records : [];
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
+async function writeExpenseRecords(records) {
+  await fs.mkdir(path.dirname(EXPENSE_DATA_FILE), { recursive: true });
+  await fs.writeFile(EXPENSE_DATA_FILE, JSON.stringify(records, null, 2), 'utf8');
 }
 
 async function readMarketIndex() {
@@ -384,6 +459,26 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/trendyol-market-import-run') {
+    try {
+      const body = await readBody(req).catch(() => ({}));
+      const result = await runTrendyolCategoryImport({
+        query: body.query,
+        label: body.label,
+        endpoint: body.endpoint,
+        pageLimit: body.pageLimit,
+        headless: body.headless
+      });
+
+      send(res, 200, result);
+    } catch (error) {
+      send(res, error.status || 500, {
+        error: error.message || 'Kategori importu baslatilamadi.'
+      });
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/trendyol-stock') {
     try {
       send(res, 200, await getTrendyolStock(url));
@@ -487,6 +582,41 @@ async function handleApi(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/api/notes') {
     const notes = await readNotes();
     send(res, 200, notes);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/expense-records') {
+    const records = await readExpenseRecords();
+    send(res, 200, records);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/expense-records') {
+    const body = await readBody(req);
+    const calculation = calculateExpense(body.inputs);
+
+    if (calculation.inputs.productQuantity <= 0) {
+      send(res, 400, { error: 'Alinan urun adedi 0dan buyuk olmali.' });
+      return;
+    }
+
+    const createdAt = new Date().toISOString();
+    const exchangeRate = normalizeExpenseExchangeRate(body.exchangeRate);
+
+    if (!exchangeRate.date) {
+      exchangeRate.date = createdAt.slice(0, 10);
+    }
+
+    const record = {
+      id: crypto.randomUUID(),
+      createdAt,
+      exchangeRate,
+      ...calculation
+    };
+
+    const records = await readExpenseRecords();
+    await writeExpenseRecords([record, ...records].slice(0, 500));
+    send(res, 201, record);
     return;
   }
 
