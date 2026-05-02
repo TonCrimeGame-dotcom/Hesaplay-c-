@@ -1062,26 +1062,6 @@
         </div>
       </div>
 
-      <div class="saved-section" hidden>
-        <div class="saved-header">
-          <h2>Trendyol stok bilgisi</h2>
-        </div>
-        <div class="stock-controls">
-          <input id="trendyolStockSearch" type="text" placeholder="Barkod ile ara veya boş bırak" />
-          <button class="btn-secondary" id="refreshTrendyolStockBtn" type="button">Stokları yenile</button>
-        </div>
-        <div class="stock-status" id="trendyolStockStatus">
-          Sadece okuma modu. Bu alandan stok değiştirilemez.
-        </div>
-        <div class="stock-tabs" aria-label="Stok filtreleri">
-          <button class="stock-tab active" type="button" data-stock-tab="available">Stokta olanlar</button>
-          <button class="stock-tab" type="button" data-stock-tab="zero">Stok 0 ürünler</button>
-        </div>
-        <div id="trendyolStockArea" class="empty-state">
-          Stok bilgisi yükleniyor.
-        </div>
-      </div>
-
       <div class="market-section">
         <div class="saved-header">
           <h2>Trendyol pazar indeksi</h2>
@@ -1138,8 +1118,6 @@
     let recordsCache = [];
     let expenseRecordsCache = [];
     let notesCache = [];
-    let trendyolStockCache = null;
-    let activeStockTab = 'available';
     let marketIndexCache = null;
     let activeMarketTab = 'all';
     let activeView = 'profit';
@@ -1197,11 +1175,6 @@
     const eurTryResult = document.getElementById('eurTryResult');
     const eurRateStatus = document.getElementById('eurRateStatus');
     const refreshRateBtn = document.getElementById('refreshRateBtn');
-    const trendyolStockSearch = document.getElementById('trendyolStockSearch');
-    const refreshTrendyolStockBtn = document.getElementById('refreshTrendyolStockBtn');
-    const trendyolStockStatus = document.getElementById('trendyolStockStatus');
-    const trendyolStockArea = document.getElementById('trendyolStockArea');
-    const stockTabButtons = Array.from(document.querySelectorAll('[data-stock-tab]'));
     const marketSearch = document.getElementById('marketSearch');
     const refreshMarketBtn = document.getElementById('refreshMarketBtn');
     const openMarketImportPageBtn = document.getElementById('openMarketImportPageBtn');
@@ -1589,13 +1562,6 @@
       return String(value || '').trim().toLowerCase();
     }
 
-    function findProfitRecordForBarcode(barcode) {
-      const normalizedBarcode = normalizeBarcode(barcode);
-      if (!normalizedBarcode) return null;
-
-      return recordsCache.find(record => normalizeBarcode(record.barcode) === normalizedBarcode) || null;
-    }
-
     function setEditingRecord(record) {
       editingRecordId = record?.id || null;
       saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
@@ -1603,93 +1569,6 @@
       recordEditStatus.textContent = editingRecordId
         ? `"${record.name}" düzenleniyor. İstersen alanları değiştirip Kaydı güncelle diyebilirsin.`
         : 'Kayıtlar sadece elle eklenir. Düzenlemek için listedeki Düzenle butonunu kullan.';
-    }
-
-    function updateStockTabs() {
-      stockTabButtons.forEach(button => {
-        button.classList.toggle('active', button.dataset.stockTab === activeStockTab);
-      });
-    }
-
-    function renderTrendyolStock(data) {
-      const allItems = data.items || [];
-      const availableItems = allItems.filter(item => item.quantity > 0);
-      const zeroItems = allItems.filter(item => item.quantity <= 0);
-      const items = activeStockTab === 'zero' ? zeroItems : availableItems;
-      const tabLabel = activeStockTab === 'zero' ? 'stok 0 ürün' : 'stokta olan ürün';
-
-      updateStockTabs();
-      trendyolStockStatus.textContent = `Sadece okuma modu. ${items.length} ${tabLabel} gösteriliyor. Stokta: ${availableItems.length}, stok 0: ${zeroItems.length}. Son kontrol: ${formatDate(data.fetchedAt)}.`;
-
-      if (!items.length) {
-        trendyolStockArea.className = 'empty-state';
-        trendyolStockArea.innerHTML = activeStockTab === 'zero'
-          ? 'Stok 0 ürün bulunamadı.'
-          : 'Stokta olan ürün bulunamadı.';
-        return;
-      }
-
-      trendyolStockArea.className = 'records-table-wrap';
-      trendyolStockArea.innerHTML = `
-        <table class="stock-table">
-          <thead>
-            <tr>
-              <th>Ürün</th>
-              <th>Barkod</th>
-              <th>Stok kodu</th>
-              <th>Stok</th>
-              <th>Kayıtlı kâr</th>
-              <th>Satış fiyatı</th>
-              <th>Liste fiyatı</th>
-              <th>Marka</th>
-              <th>Kategori</th>
-              <th>Son güncelleme</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map(item => {
-              const profitRecord = findProfitRecordForBarcode(item.barcode);
-              const profit = profitRecord?.results?.profit;
-
-              return `
-              <tr>
-                <td class="stock-product-name">${escapeHtml(item.title || '-')}</td>
-                <td>${escapeHtml(item.barcode || '-')}</td>
-                <td>${escapeHtml(item.stockCode || '-')}</td>
-                <td class="stock-amount ${item.quantity <= 0 ? 'stock-low' : 'stock-ok'}">${item.quantity}</td>
-                <td class="${profitRecord ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : ''}">
-                  ${profitRecord ? tl(profit) : 'Kayıt yok'}
-                </td>
-                <td>${tl(item.salePrice)}</td>
-                <td>${tl(item.listPrice)}</td>
-                <td>${escapeHtml(item.brand || '-')}</td>
-                <td>${escapeHtml(item.categoryName || '-')}</td>
-                <td>${formatTrendyolDate(item.lastUpdateDate)}</td>
-              </tr>
-            `}).join('')}
-          </tbody>
-        </table>
-        <div class="stock-mobile-list">
-          ${items.map(item => {
-            const profitRecord = findProfitRecordForBarcode(item.barcode);
-            const profit = profitRecord?.results?.profit;
-
-            return `
-              <div class="stock-mobile-card">
-                <div class="stock-mobile-top">
-                  <p class="stock-mobile-title">${escapeHtml(item.title || '-')}</p>
-                  <div class="stock-mobile-count ${item.quantity <= 0 ? 'stock-low' : ''}">${item.quantity} stok</div>
-                </div>
-                <div class="stock-mobile-meta">
-                  Barkod: ${escapeHtml(item.barcode || '-')}<br>
-                  Kâr: ${profitRecord ? tl(profit) : 'Kayıt yok'}<br>
-                  Satış: ${tl(item.salePrice)}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
     }
 
     function formatMarketScore(value) {
@@ -1876,40 +1755,6 @@
       } finally {
         refreshMarketBtn.disabled = false;
         refreshMarketBtn.textContent = getMarketActionLabel();
-      }
-    }
-
-    async function fetchTrendyolStock() {
-      const barcode = trendyolStockSearch.value.trim();
-      const query = new URLSearchParams({ size: '50' });
-
-      if (barcode) query.set('barcode', barcode);
-
-      activeStockTab = 'available';
-      updateStockTabs();
-      refreshTrendyolStockBtn.disabled = true;
-      refreshTrendyolStockBtn.textContent = 'Yükleniyor...';
-      trendyolStockStatus.textContent = 'Trendyol stok bilgisi alınıyor.';
-      trendyolStockArea.className = 'empty-state';
-      trendyolStockArea.innerHTML = 'Stok bilgisi yükleniyor.';
-
-      try {
-        const response = await fetch(apiUrl(`/api/trendyol-stock?${query.toString()}`));
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.error || 'Trendyol stok bilgisi alınamadı.');
-        }
-
-        trendyolStockCache = await response.json();
-        renderTrendyolStock(trendyolStockCache);
-      } catch (error) {
-        trendyolStockStatus.textContent = 'Sadece okuma modu.';
-        trendyolStockArea.className = 'empty-state';
-        trendyolStockArea.innerHTML = escapeHtml(error.message);
-      } finally {
-        refreshTrendyolStockBtn.disabled = false;
-        refreshTrendyolStockBtn.textContent = 'Stokları yenile';
       }
     }
 
@@ -2110,7 +1955,6 @@
 
         recordsCache = await response.json();
         renderRecords(recordsCache);
-        if (trendyolStockCache) renderTrendyolStock(trendyolStockCache);
       } catch (error) {
         recordsArea.className = 'empty-state';
         recordsArea.innerHTML = escapeHtml(error.message);
@@ -2285,7 +2129,6 @@
 
         recordEditStatus.textContent = `${created} yeni kayıt, ${updated} güncelleme yapıldı. ${skipped} ürün atlandı.`;
         await fetchRecords();
-        await fetchTrendyolStock();
       } catch (error) {
         recordEditStatus.textContent = 'Aktarım tamamlanamadı.';
         alert(error.message);
@@ -2401,7 +2244,6 @@
     viewButtons.forEach(button => {
       button.addEventListener('click', () => setActiveView(button.dataset.viewButton, { scroll: true }));
     });
-    refreshTrendyolStockBtn.addEventListener('click', fetchTrendyolStock);
     refreshMarketBtn.addEventListener('click', () => fetchTrendyolMarketIndex({ refresh: true }));
     openMarketImportPageBtn.addEventListener('click', () => {
       window.open(getMarketImportPageUrl(), '_blank', 'noopener,noreferrer');
@@ -2412,21 +2254,8 @@
       if (marketIndexCache) renderTrendyolMarketIndex(marketIndexCache);
     });
     cancelEditBtn.addEventListener('click', resetForm);
-    trendyolStockSearch.addEventListener('keydown', event => {
-      if (event.key === 'Enter') fetchTrendyolStock();
-    });
     marketSearch.addEventListener('keydown', event => {
       if (event.key === 'Enter' && marketIndexCache) renderTrendyolMarketIndex(marketIndexCache);
-    });
-    stockTabButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        activeStockTab = button.dataset.stockTab;
-        if (trendyolStockCache) {
-          renderTrendyolStock(trendyolStockCache);
-        } else {
-          updateStockTabs();
-        }
-      });
     });
     marketTabButtons.forEach(button => {
       button.addEventListener('click', () => {
