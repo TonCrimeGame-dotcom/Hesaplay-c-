@@ -430,61 +430,17 @@ async function importTrendyolRecords(url) {
 
 async function handleApi(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/api/trendyol-market-index') {
-    send(res, 200, await readMarketIndex());
+    send(res, 410, { error: 'Trendyol pazar indeksi ozelligi kapatildi.' });
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/api/trendyol-market-index') {
-    try {
-      const body = await readBody(req).catch(() => ({}));
-
-      if (body.mode === 'import' || Array.isArray(body.items)) {
-        const current = await readMarketIndex();
-        const imported = buildMarketPayloadFromImportedItems(body.items, {
-          terms: Array.isArray(body.terms) ? body.terms : undefined,
-          importSource: body.importSource || 'browser-session',
-          source: 'browser-session-import'
-        });
-        const merged = mergeMarketPayloads(current, imported, {
-          source: 'browser-session-import'
-        });
-
-        await writeMarketIndex(merged);
-        send(res, 200, merged);
-        return;
-      }
-
-      const payload = await refreshPublicMarketIndex({
-        terms: Array.isArray(body.terms) ? body.terms : undefined,
-        pageLimit: body.pageLimit,
-        detailLimit: body.detailLimit
-      });
-
-      await writeMarketIndex(payload);
-      send(res, 200, payload);
-    } catch (error) {
-      send(res, error.status || 500, { error: error.message || 'Public Trendyol pazari taranamadi.' });
-    }
+    send(res, 410, { error: 'Trendyol pazar indeksi ozelligi kapatildi.' });
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/api/trendyol-market-import-run') {
-    try {
-      const body = await readBody(req).catch(() => ({}));
-      const result = await runTrendyolCategoryImport({
-        query: body.query,
-        label: body.label,
-        endpoint: body.endpoint,
-        pageLimit: body.pageLimit,
-        headless: body.headless
-      });
-
-      send(res, 200, result);
-    } catch (error) {
-      send(res, error.status || 500, {
-        error: error.message || 'Kategori importu baslatilamadi.'
-      });
-    }
+    send(res, 410, { error: 'Trendyol import ozelligi kapatildi.' });
     return;
   }
 
@@ -712,7 +668,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/market-import.html') {
-      await sendFile(res, path.join(ROOT, 'market-import.html'), 'text/html; charset=utf-8');
+      send(res, 410, 'Trendyol import sayfasi kapatildi.');
       return;
     }
 
