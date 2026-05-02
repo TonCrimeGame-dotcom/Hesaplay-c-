@@ -967,12 +967,12 @@
       <div class="grid">
         <div class="field">
           <label for="recordName">Ürün / kayıt adı</label>
-          <input id="recordName" type="text" placeholder="Örn: Trendyol kulaklık" />
+          <input id="recordName" type="text" placeholder="Örn: Siyah kulaklık" />
         </div>
 
         <div class="field">
-          <label for="recordBarcode">Trendyol barkod</label>
-          <input id="recordBarcode" type="text" placeholder="Trendyol ürün barkodu" />
+          <label for="recordBarcode">Ürün barkodu</label>
+          <input id="recordBarcode" type="text" placeholder="Ürün barkodu" />
         </div>
 
         <div class="field">
@@ -1048,9 +1048,9 @@
           </div>
         </div>
         <div class="record-tools">
-          <button class="btn-secondary" id="importTrendyolRecordsBtn" type="button">Trendyol ürünlerini ortak kayıtlara aktar</button>
+          <button class="btn-secondary" id="importTrendyolRecordsBtn" type="button" hidden>Trendyol ürünlerini ortak kayıtlara aktar</button>
           <button class="btn-secondary" id="cancelEditBtn" type="button" hidden>Yeni kayıt moduna geç</button>
-          <span class="record-status" id="recordEditStatus">Kayıtlar barkoda göre eşleşir.</span>
+          <span class="record-status" id="recordEditStatus">Kayıtlar sadece elle eklenir. Düzenlemek için listedeki Düzenle butonunu kullan.</span>
         </div>
         <div class="record-window">
           <div class="record-search-row">
@@ -1062,7 +1062,7 @@
         </div>
       </div>
 
-      <div class="saved-section">
+      <div class="saved-section" hidden>
         <div class="saved-header">
           <h2>Trendyol stok bilgisi</h2>
         </div>
@@ -1601,8 +1601,8 @@
       saveBtn.textContent = editingRecordId ? 'Kaydı güncelle' : 'Kaydet';
       cancelEditBtn.hidden = !editingRecordId;
       recordEditStatus.textContent = editingRecordId
-        ? `"${record.name}" düzenleniyor. Geliş fiyatını değiştirip Kaydı güncelle diyebilirsin.`
-        : 'Kayıtlar barkoda göre eşleşir.';
+        ? `"${record.name}" düzenleniyor. İstersen alanları değiştirip Kaydı güncelle diyebilirsin.`
+        : 'Kayıtlar sadece elle eklenir. Düzenlemek için listedeki Düzenle butonunu kullan.';
     }
 
     function updateStockTabs() {
@@ -1916,7 +1916,7 @@
     function renderRecords(records) {
       if (!records.length) {
         recordsArea.className = 'empty-state';
-        recordsArea.innerHTML = "Henüz ortak kayıt yok. Bir ürün hesaplayıp Kaydet'e basınca siteye giren herkes burada görür.";
+        recordsArea.innerHTML = "Henüz ürün kaydı yok. Elle eklediğin ürünler burada kalıcı olarak listelenecek.";
         return;
       }
 
@@ -1934,7 +1934,11 @@
         return;
       }
 
-      const sortedRecords = [...filteredRecords].sort((a, b) => b.results.profit - a.results.profit);
+      const sortedRecords = [...filteredRecords].sort((a, b) => {
+        const aDate = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const bDate = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return bDate - aDate;
+      });
 
       recordsArea.className = 'record-card-scroll';
       recordsArea.innerHTML = `
@@ -1950,7 +1954,7 @@
               <div class="record-card-body">
                 <p class="record-card-title">${escapeHtml(record.name)}</p>
                 <div class="record-card-meta">
-                  Barkod: ${escapeHtml(record.barcode || '-')} · ${formatDate(record.createdAt)}
+                  Barkod: ${escapeHtml(record.barcode || '-')} · Oluşturma: ${formatDate(record.createdAt)} · Son güncelleme: ${formatDate(record.updatedAt || record.createdAt)}
                 </div>
                 <div class="record-card-stats">
                   <div class="record-card-stat">
@@ -1972,7 +1976,7 @@
                 </div>
               </div>
               <div class="record-card-actions">
-                <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Aç</button>
+                <button class="btn-secondary" type="button" data-action="load" data-id="${record.id}">Düzenle</button>
                 <button class="btn-danger" type="button" data-action="delete" data-id="${record.id}">Sil</button>
               </div>
             </article>
@@ -2478,7 +2482,6 @@
     calculate();
     calculateExpense();
     setActiveView(activeView);
-    fetchTrendyolStock();
     fetchTrendyolMarketIndex();
     fetchRecords();
     fetchExpenseRecords();
