@@ -167,7 +167,16 @@ async function readRecords() {
   try {
     const content = await fs.readFile(DATA_FILE, 'utf8');
     const records = JSON.parse(content);
-    return Array.isArray(records) ? records : [];
+    if (!Array.isArray(records)) return [];
+
+    return records.map(record => {
+      const createdAt = record.createdAt || record.updatedAt || new Date().toISOString();
+      return {
+        ...record,
+        createdAt,
+        updatedAt: record.updatedAt || createdAt
+      };
+    });
   } catch (error) {
     if (error.code === 'ENOENT') return [];
     throw error;
@@ -480,6 +489,16 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === 'GET' && url.pathname === '/api/trendyol-stock') {
+    send(res, 410, { error: 'Trendyol stok cekme ozelligi kapatildi.' });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/import-trendyol-records') {
+    send(res, 410, { error: 'Trendyol urunlerini ortak kayitlara aktarma ozelligi kapatildi.' });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/trendyol-stock') {
     try {
       send(res, 200, await getTrendyolStock(url));
     } catch (error) {
@@ -514,16 +533,18 @@ async function handleApi(req, res, url) {
     }
 
     const calculation = calculate(body.inputs);
+    const now = new Date().toISOString();
     const record = {
       id: crypto.randomUUID(),
       name,
       barcode,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       ...calculation
     };
 
     const records = await readRecords();
-    const nextRecords = [record, ...records].slice(0, 500);
+    const nextRecords = [record, ...records];
     await writeRecords(nextRecords);
     send(res, 201, record);
     return;
@@ -548,6 +569,13 @@ async function handleApi(req, res, url) {
 
     const calculation = calculate(body.inputs);
     const records = await readRecords();
+    const existingRecord = records.find(record => record.id === id);
+
+    if (!existingRecord) {
+      send(res, 404, { error: 'Kayit bulunamadi.' });
+      return;
+    }
+
     const nextRecords = records.map(record => {
       if (record.id !== id) return record;
 
@@ -556,6 +584,7 @@ async function handleApi(req, res, url) {
         name,
         barcode,
         createdAt: record.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         ...calculation
       };
     });
@@ -615,7 +644,7 @@ async function handleApi(req, res, url) {
     };
 
     const records = await readExpenseRecords();
-    await writeExpenseRecords([record, ...records].slice(0, 500));
+    await writeExpenseRecords([record, ...records]);
     send(res, 201, record);
     return;
   }
